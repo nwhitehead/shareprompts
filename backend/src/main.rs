@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate diesel;
 
 mod schema;
@@ -15,18 +14,17 @@ type DbError = Box<dyn std::error::Error + Send + Sync>;
 
 use schema::posts;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
 #[diesel(table_name = posts)]
 pub struct Post {
-    pub id: i32,
+    pub id: String,
     pub title: String,
     pub body: String,
     pub public: bool,
     pub research: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
-#[diesel(table_name = posts)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewPost {
     pub title: String,
     pub body: String,
@@ -36,54 +34,51 @@ pub struct NewPost {
 
 fn find_post_by_id(
     conn: &mut DbConnection,
-    id: i32,
-) -> Result<Option<i32>, DbError> {
+    postid: String,
+) -> Result<Option<Post>, DbError> {
     use self::schema::posts::dsl::*;
     let results = posts
-        .filter(public.eq(true))
-        .limit(5)
+        .filter(id.eq(postid))
+        .limit(1)
         .load::<Post>(conn)
-        .expect("Error loading posts");
+        .expect("Error finding post");
 
-    println!("Displaying {} posts", results.len());
-    for post in results {
-        println!("{}", post.title);
-        println!("-----------\n");
-        println!("{}", post.body);
+    if results.len() == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(results[0].clone()))
     }
-
-    Ok(Some(5))
 }
 
 fn new_post(
     conn: &mut DbConnection,
-    post: NewPost,
-) -> Result<i32, DbError> {
+    post: Post,
+) -> Result<String, DbError> {
     use self::schema::posts::dsl::*;
-
-    let mut inserted_post = diesel::insert_into(posts)
+    let new_uuid = post.id.clone();
+    diesel::insert_into(posts)
         .values(post)
-        .get_result::<Post>(conn)
+        .execute(conn)
         .expect("Error saving new post");
-    Ok(inserted_post.id)
+    Ok(new_uuid)
 }
 
 #[get("/api/conversation/{id}")]
 async fn get_conversation(
     pool: web::Data<DbPool>,
-    id: web::Path<(i32,)>
+    id: web::Path<(String,)>
 ) -> actix_web::Result<impl Responder> {
     println!("Got a GET");
     let uid = id.into_inner().0;
     // Don't block server thread
-    let post: Option<i32> = web::block(move || {
+    let post = web::block(move || {
         let mut conn = pool.get()?;
         find_post_by_id(&mut conn, uid)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
     Ok(
-        HttpResponse::Ok().body(format!("Getting post uid={}\npost={}", uid, post.unwrap()))
+        HttpResponse::Ok().body(format!("Getting post post.title={}", post.unwrap().title))
     )
 }
 
@@ -95,7 +90,8 @@ async fn post_conversation(
     println!("Got a POST");
     let postid = web::block(move || {
         let mut conn = pool.get()?;
-        let np = NewPost { title: form.title.clone(), body: form.body.clone(), public: form.public, research: form.research};
+        let new_uuid = uuid::Uuid::new_v4().simple().to_string();
+        let np = Post { id: new_uuid, title: form.title.clone(), body: form.body.clone(), public: form.public, research: form.research};
         new_post(&mut conn, np)
     })
     .await?
