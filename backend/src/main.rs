@@ -1,22 +1,41 @@
 #[macro_use]
 extern crate diesel;
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{error, get, post, web, App, HttpResponse, HttpServer, Responder};
 //use serde::{Deserialize, Serialize};
 use diesel::{prelude::*, r2d2};
 
 // Types related to Postgres connection to database
 type ConnectionManager = r2d2::ConnectionManager<diesel::pg::PgConnection>;
 type DbPool = r2d2::Pool<ConnectionManager>;
+type DbError = Box<dyn std::error::Error + Send + Sync>;
 
 #[get("/")]
 async fn hello() -> impl Responder {
     HttpResponse::Ok().body("Hello world!\n")
 }
 
+fn find_user_by_id(id: i32) -> Result<Option<i32>, DbError> {
+    Ok(Some(5))
+}
+
 #[get("/post/{id}")]
-async fn get_post(id: web::Path<(i32,)>) -> impl Responder {
-    HttpResponse::Ok().body(format!("Getting post id={}\n", id.into_inner().0))
+async fn get_post(
+    pool: web::Data<DbPool>,
+    id: web::Path<(i32,)>
+) -> actix_web::Result<impl Responder> {
+    let uid = id.into_inner().0;
+    // Don't block server thread
+    let user: Option<i32> = web::block(move || {
+        let mut conn = pool.get()?;
+        //actions::find_user_by_uid(&mut conn, user_uid)
+        find_user_by_id(uid)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(
+        HttpResponse::Ok().body(format!("Getting post uid={}\nuser={}", uid, user.unwrap()))
+    )
 }
 
 #[actix_web::main]
