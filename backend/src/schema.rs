@@ -4,8 +4,9 @@ diesel::table! {
     conversations (id) {
         id -> Text,
         title -> Varchar,
-        body -> Text,
+        contents -> Text,
         public -> Bool,
         research -> Bool,
+        creationdate -> Timestamp,
     }
 }

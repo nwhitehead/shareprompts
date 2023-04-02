@@ -3,8 +3,8 @@ extern crate diesel;
 mod schema;
 
 use actix_web::{error, get, post, web, App, HttpResponse, HttpServer, Responder};
-use serde::{Deserialize, Serialize};
 use diesel::{prelude::*, r2d2};
+use serde::{Deserialize, Serialize};
 
 // Types related to Postgres connection to database
 type DbConnection = diesel::pg::PgConnection;
@@ -20,16 +20,17 @@ use schema::conversations;
 pub struct Conversation {
     pub id: String,
     pub title: String,
-    pub body: String,
+    pub contents: String,
     pub public: bool,
     pub research: bool,
+    pub creationdate: std::time::SystemTime,
 }
 
 // Information that is required when making a new conversation
 #[derive(Serialize, Deserialize)]
 pub struct NewConversation {
     pub title: String,
-    pub body: String,
+    pub contents: String,
     pub public: bool,
     pub research: bool,
 }
@@ -68,7 +69,7 @@ fn new_conversation(
 #[get("/api/conversation/{id}")]
 async fn get_conversation(
     pool: web::Data<DbPool>,
-    id: web::Path<(String,)>
+    id: web::Path<(String,)>,
 ) -> actix_web::Result<impl Responder> {
     println!("Got a GET");
     let uid = id.into_inner().0;
@@ -79,9 +80,10 @@ async fn get_conversation(
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
-    Ok(
-        HttpResponse::Ok().body(format!("Getting conversation conversation.title={}", conversation.unwrap().title))
-    )
+    Ok(HttpResponse::Ok().body(format!(
+        "Getting conversation conversation.title={}",
+        conversation.unwrap().title
+    )))
 }
 
 #[post("/api/conversation")]
@@ -93,14 +95,19 @@ async fn post_conversation(
     let convo_id = web::block(move || {
         let mut conn = pool.get()?;
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
-        let nc = Conversation { id: new_uuid, title: form.title.clone(), body: form.body.clone(), public: form.public, research: form.research};
+        let nc = Conversation {
+            id: new_uuid,
+            title: form.title.clone(),
+            contents: form.contents.clone(),
+            public: form.public,
+            research: form.research,
+            creationdate: chrono::Utc::now().into(),
+        };
         new_conversation(&mut conn, nc)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
-    Ok(
-        HttpResponse::Created().json(convo_id)
-    )
+    Ok(HttpResponse::Created().json(convo_id))
 }
 
 #[actix_web::main]
