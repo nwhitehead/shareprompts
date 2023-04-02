@@ -12,11 +12,12 @@ type DbConnectionManager = r2d2::ConnectionManager<DbConnection>;
 type DbPool = r2d2::Pool<DbConnectionManager>;
 type DbError = Box<dyn std::error::Error + Send + Sync>;
 
-use schema::posts;
+use schema::conversations;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable)]
-#[diesel(table_name = posts)]
-pub struct Post {
+// Model for conversations in the database with all fields
+#[derive(Debug, Clone, Queryable, Insertable)]
+#[diesel(table_name = conversations)]
+pub struct Conversation {
     pub id: String,
     pub title: String,
     pub body: String,
@@ -24,23 +25,24 @@ pub struct Post {
     pub research: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewPost {
+// Information that is required when making a new conversation
+#[derive(Serialize, Deserialize)]
+pub struct NewConversation {
     pub title: String,
     pub body: String,
     pub public: bool,
     pub research: bool,
 }
 
-fn find_post_by_id(
+fn find_conversation_by_id(
     conn: &mut DbConnection,
-    postid: String,
-) -> Result<Option<Post>, DbError> {
-    use self::schema::posts::dsl::*;
-    let results = posts
-        .filter(id.eq(postid))
+    convo_id: String,
+) -> Result<Option<Conversation>, DbError> {
+    use self::schema::conversations::dsl::*;
+    let results = conversations
+        .filter(id.eq(convo_id))
         .limit(1)
-        .load::<Post>(conn)
+        .load::<Conversation>(conn)
         .expect("Error finding post");
 
     if results.len() == 0 {
@@ -50,16 +52,16 @@ fn find_post_by_id(
     }
 }
 
-fn new_post(
+fn new_conversation(
     conn: &mut DbConnection,
-    post: Post,
+    conversation: Conversation,
 ) -> Result<String, DbError> {
-    use self::schema::posts::dsl::*;
-    let new_uuid = post.id.clone();
-    diesel::insert_into(posts)
-        .values(post)
+    use self::schema::conversations::dsl::*;
+    let new_uuid = conversation.id.clone();
+    diesel::insert_into(conversations)
+        .values(conversation)
         .execute(conn)
-        .expect("Error saving new post");
+        .expect("Error saving new conversation");
     Ok(new_uuid)
 }
 
@@ -71,33 +73,33 @@ async fn get_conversation(
     println!("Got a GET");
     let uid = id.into_inner().0;
     // Don't block server thread
-    let post = web::block(move || {
+    let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_post_by_id(&mut conn, uid)
+        find_conversation_by_id(&mut conn, uid)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
     Ok(
-        HttpResponse::Ok().body(format!("Getting post post.title={}", post.unwrap().title))
+        HttpResponse::Ok().body(format!("Getting conversation conversation.title={}", conversation.unwrap().title))
     )
 }
 
 #[post("/api/conversation")]
 async fn post_conversation(
     pool: web::Data<DbPool>,
-    form: web::Json<NewPost>,
+    form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
     println!("Got a POST");
-    let postid = web::block(move || {
+    let convo_id = web::block(move || {
         let mut conn = pool.get()?;
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
-        let np = Post { id: new_uuid, title: form.title.clone(), body: form.body.clone(), public: form.public, research: form.research};
-        new_post(&mut conn, np)
+        let nc = Conversation { id: new_uuid, title: form.title.clone(), body: form.body.clone(), public: form.public, research: form.research};
+        new_conversation(&mut conn, nc)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
     Ok(
-        HttpResponse::Created().json(postid)
+        HttpResponse::Created().json(convo_id)
     )
 }
 

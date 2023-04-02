@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    posts (id) {
+    conversations (id) {
         id -> Text,
         title -> Varchar,
         body -> Text,
