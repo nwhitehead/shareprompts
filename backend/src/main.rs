@@ -81,8 +81,8 @@ async fn get_conversation(
     .await?
     .map_err(error::ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().body(format!(
-        "Getting conversation conversation.title={}",
-        conversation.unwrap().title
+        "Getting conversation conversation={:?}",
+        conversation.unwrap()
     )))
 }
 
