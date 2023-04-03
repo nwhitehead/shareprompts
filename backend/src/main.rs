@@ -26,13 +26,13 @@ pub struct Conversation {
     pub creationdate: std::time::SystemTime,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Utterance {
     pub who: String, // either "gpt" or "human"
     pub what: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConversationContents {
     pub avatar: String, // data URI of avatar
     pub dialog: Vec<Utterance>,
@@ -47,6 +47,18 @@ pub struct NewConversation {
     pub research: bool,
 }
 
+// Information returned from GET
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConversationInfo {
+    pub id: String,
+    pub title: String,
+    pub contents: ConversationContents,
+    pub public: bool,
+    pub research: bool,
+    pub creationdate: std::time::SystemTime,
+}
+
+// Look in DB for specific ID an return DB Conversation if found
 fn find_conversation_by_id(
     conn: &mut DbConnection,
     convo_id: String,
@@ -65,27 +77,6 @@ fn find_conversation_by_id(
     }
 }
 
-// /// Verify that a Conversation has Contents that is JSON deserializable to ConversationContents
-// fn verify_conversation(conversation: Conversation) -> bool {
-//     match serde_json::from_str::<ConversationContents>(&conversation.contents) {
-//         Ok(_) => true,
-//         Err(_) => false
-//     }
-// }
-
-// fn new_conversation(
-//     conn: &mut DbConnection,
-//     conversation: Conversation,
-// ) -> Result<String, DbError> {
-//     use self::schema::conversations::dsl::*;
-//     let new_uuid = conversation.id.clone();
-//     diesel::insert_into(conversations)
-//         .values(conversation)
-//         .execute(conn)
-//         .expect("Error saving new conversation");
-//     Ok(new_uuid)
-// }
-
 #[get("/api/conversation/{id}")]
 async fn get_conversation(
     pool: web::Data<DbPool>,
@@ -93,17 +84,33 @@ async fn get_conversation(
 ) -> actix_web::Result<impl Responder> {
     println!("Got a GET");
     let uid = id.into_inner().0;
-    // Don't block server thread
+    // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
         find_conversation_by_id(&mut conn, uid)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Ok().body(format!(
-        "Getting conversation conversation={:?}",
-        conversation.unwrap()
-    )))
+    match conversation {
+        Some(conv) => {
+            let conversation_info = ConversationInfo {
+                id: conv.id.clone(),
+                title: conv.title.clone(),
+                contents: serde_json::from_str(&conv.contents)?,
+                public: conv.public,
+                research: conv.research,
+                creationdate: conv.creationdate,
+            };
+            Ok(HttpResponse::Ok().body(format!(
+                "Getting conversation conversation={:?}", conversation_info
+            )))
+        }
+        None => {
+            Ok(HttpResponse::NotFound().body(format!(
+                "Not found"
+            )))
+        }
+    }
 }
 
 #[derive(Debug)]
