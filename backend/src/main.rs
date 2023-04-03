@@ -101,9 +101,7 @@ async fn get_conversation(
                 research: conv.research,
                 creationdate: conv.creationdate,
             };
-            Ok(HttpResponse::Ok().body(format!(
-                "Getting conversation conversation={:?}", conversation_info
-            )))
+            Ok(HttpResponse::Ok().json(conversation_info))
         }
         None => {
             Ok(HttpResponse::NotFound().body(format!(
