@@ -2,6 +2,7 @@ CREATE TABLE conversations (
   id TEXT PRIMARY KEY,
   title VARCHAR NOT NULL,
   contents TEXT NOT NULL,
+  model TEXT NOT NULL,
   public BOOLEAN NOT NULL DEFAULT TRUE,
   research BOOLEAN NOT NULL DEFAULT TRUE,
   creationdate TIMESTAMP NOT NULL

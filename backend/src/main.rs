@@ -21,6 +21,7 @@ pub struct Conversation {
     pub id: String,
     pub title: String,
     pub contents: String, // JSON for ConversationContents
+    pub model: String,
     pub public: bool,
     pub research: bool,
     pub creationdate: std::time::SystemTime,
@@ -34,7 +35,7 @@ pub struct Utterance {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConversationContents {
-    pub avatar: String, // data URI of avatar
+    pub avatar: String, // data URL of avatar, (may be anonymized)
     pub dialog: Vec<Utterance>,
 }
 
@@ -43,6 +44,7 @@ pub struct ConversationContents {
 pub struct NewConversation {
     pub title: String,
     pub contents: ConversationContents,
+    pub model: String,
     pub public: bool,
     pub research: bool,
 }
@@ -150,6 +152,7 @@ async fn post_conversation(
             id: new_uuid.clone(),
             title: form.title.clone(),
             contents: json_contents,
+            model: form.model.clone(),
             public: form.public,
             research: form.research,
             creationdate: chrono::Utc::now().into(),

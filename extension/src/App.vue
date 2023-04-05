@@ -1,11 +1,13 @@
 <script setup>
+
 import { reactive } from 'vue';
 import { storageBacked } from './storageBacked.js';
 
 const configuration = storageBacked('config',
     reactive({
-        'public':true,
-        'research':true,
+        'avatar': true,
+        'public': true,
+        'research': true,
     })
 );
 
@@ -16,6 +18,12 @@ const configuration = storageBacked('config',
 
     <button @click="handleClick" />
 
+    <p>
+        <label>
+            <input type="checkbox" id="avatar" v-model="configuration.avatar" />
+            Include actual avatar picture.
+        </label>
+    </p>
     <p>
         <label>
             <input type="checkbox" id="public" v-model="configuration.public" />
@@ -34,3 +42,7 @@ const configuration = storageBacked('config',
     </p>
 
 </template>
+
+<style>
+
+</style>

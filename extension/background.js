@@ -2,10 +2,9 @@
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
-        const v = await chrome.storage.sync.get();
-        if (request.type === "configuration") {
-            const resp = {farewell: "goodbye", config: v};
-            sendResponse(resp);
+        const dict = await chrome.storage.sync.get('config');
+        if (request.type === "get_configuration") {
+            sendResponse(dict);
         }    
     })();
     return true; // Tell chrome to expect response asynchronously

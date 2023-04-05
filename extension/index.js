@@ -1,20 +1,9 @@
 
-function handleResponse(message) {
-    console.log('Message from the background script:', message);
-}
-  
-function handleError(error) {
-    console.log(`Error: ${error}`);
-}
-
 async function handleClick(button) {
 
-    //console.log('browser.runtime is ', browser.runtime);
-    console.log('chrome.runtime is ', chrome.runtime);
+    const config = await chrome.runtime.sendMessage({type: "get_configuration"});
 
-    chrome.runtime.sendMessage({type: "configuration"}).then(handleResponse, handleError);
-
-    console.log('Sharing...');
+    console.log('Sharing...', config);
 
     button.textContent = "Sharing...";
     button.style.cursor = "initial";
@@ -33,7 +22,7 @@ async function handleClick(button) {
     const conversationData = {
         avatar: getAvatar(),
         model,
-        items: [],
+        dialog: [],
     };
 
     for (const node of threadContainer.children) {
@@ -41,22 +30,21 @@ async function handleClick(button) {
         if ([...node.classList].includes("dark:bg-gray-800")) {
             const warning = node.querySelector(".text-orange-500");
             if (warning) {
-                conversationData.items.push({
-                from: "human",
-                value: warning.innerText.split("\n")[0],
+                conversationData.dialog.push({
+                    who: "human",
+                    what: warning.innerText.split("\n")[0],
                 });
             } else {
                 const text = node.querySelector(".whitespace-pre-wrap");
-                conversationData.items.push({
-                from: "human",
-                value: text.textContent,
+                conversationData.dialog.push({
+                    who: "human",
+                    what: text.textContent,
                 });
             }
-        // if it's a GPT response, it might contain code blocks
         } else if (markdown) {
-            conversationData.items.push({
-                from: "gpt",
-                value: markdown.outerHTML,
+            conversationData.dialog.push({
+                who: "gpt",
+                wnat: markdown.outerHTML,
             });
         }
     }
