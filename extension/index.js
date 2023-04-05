@@ -1,8 +1,20 @@
 
+function handleResponse(message) {
+    console.log('Message from the background script:', message);
+}
+  
+function handleError(error) {
+    console.log(`Error: ${error}`);
+}
+
 async function handleClick(button) {
 
+    //console.log('browser.runtime is ', browser.runtime);
+    console.log('chrome.runtime is ', chrome.runtime);
+
+    chrome.runtime.sendMessage({type: "configuration"}).then(handleResponse, handleError);
+
     console.log('Sharing...');
-    console.log(global_extension_variable);
 
     button.textContent = "Sharing...";
     button.style.cursor = "initial";

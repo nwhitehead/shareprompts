@@ -4,7 +4,7 @@
     "description": "Share your ChatGPT conversations",
     "version": "1.0",
     "action": {
-        "default_popup": "main.html",
+        "default_popup": "dist/index.html",
         "default_icon": "images/logo-128.png"
     },
     "icons": {
@@ -19,5 +19,11 @@
           "js": ["index.js"],
           "run_at": "document_end"
         }
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "storage", "tabs"
     ]
 }
