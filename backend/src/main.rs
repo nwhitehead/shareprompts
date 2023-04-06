@@ -25,6 +25,7 @@ pub struct Conversation {
     pub public: bool,
     pub research: bool,
     pub creationdate: std::time::SystemTime,
+    pub user_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,6 +48,7 @@ pub struct NewConversation {
     pub model: String,
     pub public: bool,
     pub research: bool,
+    pub token: String,
 }
 
 // Information returned from GET
@@ -75,7 +77,12 @@ fn find_conversation_by_id(
     if results.len() == 0 {
         Ok(None)
     } else {
-        Ok(Some(results[0].clone()))
+        let result = results[0].clone();
+        if result.public {
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -156,6 +163,7 @@ async fn post_conversation(
             public: form.public,
             research: form.research,
             creationdate: chrono::Utc::now().into(),
+            user_id: "nathan".to_string(),
         };
         use self::schema::conversations::dsl::*;
         diesel::insert_into(conversations)

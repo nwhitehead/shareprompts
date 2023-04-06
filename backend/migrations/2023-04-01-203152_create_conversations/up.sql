@@ -5,5 +5,6 @@ CREATE TABLE conversations (
   model TEXT NOT NULL,
   public BOOLEAN NOT NULL DEFAULT TRUE,
   research BOOLEAN NOT NULL DEFAULT TRUE,
-  creationdate TIMESTAMP NOT NULL
+  creationdate TIMESTAMP NOT NULL,
+  user_id TEXT NOT NULL
 )

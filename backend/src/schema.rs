@@ -9,5 +9,6 @@ diesel::table! {
         public -> Bool,
         research -> Bool,
         creationdate -> Timestamp,
+        user_id -> Text,
     }
 }
