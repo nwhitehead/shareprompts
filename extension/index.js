@@ -1,9 +1,9 @@
 
 async function handleClick(button) {
 
-    console.log('handleClick for share');
-
-    let config = JSON.parse((await chrome.runtime.sendMessage({type: "get_configuration"})).config);
+    const msg = await chrome.runtime.sendMessage({type: "get_configuration"});
+    const config = JSON.parse(msg.config);
+    const token = msg.token;
 
     button.textContent = "Sharing...";
     button.style.cursor = "initial";
@@ -18,7 +18,6 @@ async function handleClick(button) {
     if (upgrade_button && upgrade_button.innerText.includes("Upgrade")) {
         model = document.querySelector("main a.underline").innerHTML;
     }
-    console.log(`Model: ${model}`);
 
     const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
     const conversationData = {
@@ -50,7 +49,9 @@ async function handleClick(button) {
             });
         }
     }
+    console.log('config', config);
     console.log('conversationData', conversationData);
+    console.log('oauth2 token', token);
 }
 
 function addButton() {
