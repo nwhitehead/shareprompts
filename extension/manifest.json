@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "ShareConversations",
     "description": "Share your ChatGPT conversations",
-    "version": "1.0",
+    "version": "1.01",
     "action": {
         "default_popup": "dist/index.html",
         "default_icon": "images/logo-128.png"
@@ -24,6 +24,7 @@
         "service_worker": "background.js"
     },
     "permissions": [
-        "storage", "tabs"
-    ]
+        "storage", "identity", "identity.email"
+    ],
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAumevz87I7JIUvOYuJx32gDKdeiVRkZuayGjKcEe8uIEIRu4E/fnAJ2/M1zwJ8O0aZDK0lMejMKVxeanTZKRtOy9yPG4JeZX7OTFcuIsMv1ADtp6lu38RHmD56/ebPUeqjOiROfqsTDJRyWOf5E3/ZQLXH4+YzTtkadTk4AM+inYBKvFxGUjuKF1LZwBvV7zSyFYYg5Yijv/yFgWoJbeWpRciRtYzzDuFk9xj9pV2Ypbvz/O3GUtupdOklCkrizXIH1CippJIndxt4Ok9lTzS67cOvMxNxo1hTdE3FkYKGLMwkwp3A/NrPiEITqBtCu9EmNoeaiVNOKFtK2tj3gYWmQIDAQAB"
 }

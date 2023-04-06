@@ -1,15 +1,16 @@
 
 async function handleClick(button) {
 
-    const config = await chrome.runtime.sendMessage({type: "get_configuration"});
+    console.log('handleClick for share');
 
-    console.log('Sharing...', config);
+    let config = JSON.parse((await chrome.runtime.sendMessage({type: "get_configuration"})).config);
 
     button.textContent = "Sharing...";
     button.style.cursor = "initial";
 
     const threadContainer = document.querySelector("main div .flex");
 
+    // Figure out model
     // Start by assuming ChatGPT Plus
     let model = "ChatGPT Plus";
     // If we don't see an upgrade button, then look for specific model in link at bottom
@@ -19,12 +20,13 @@ async function handleClick(button) {
     }
     console.log(`Model: ${model}`);
 
+    const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
     const conversationData = {
-        avatar: getAvatar(),
+        avatar,
         model,
         dialog: [],
     };
-
+    // Fill out dialog part
     for (const node of threadContainer.children) {
         const markdown = node.querySelector(".markdown");
         if ([...node.classList].includes("dark:bg-gray-800")) {
@@ -55,6 +57,7 @@ function addButton() {
     const button = document.createElement("button");  
     button.id = "share";
     button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-neutral");
+    // svg icon here is something I drew in inkscape and optimized online
     button.innerHTML = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="5mm" height="5mm" version="1.1" viewBox="0 0 9.0162 8.8533" xmlns="http://www.w3.org/2000/svg">
 <g transform="translate(-4.3461 -4.7617)">
@@ -72,6 +75,17 @@ function ensureButton() {
     if (!document.querySelector('#share')) {
         addButton();
     }
+}
+
+function getAnonymousAvatar() {
+    // Just make a solid color for now
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgb(239,92,128)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
 }
 
 function getAvatar() {

@@ -16,8 +16,6 @@ const configuration = storageBacked('config',
 <template>
     <h1>Share Conversations</h1>
 
-    <button @click="handleClick" />
-
     <p>
         <label>
             <input type="checkbox" id="avatar" v-model="configuration.avatar" />
@@ -42,7 +40,3 @@ const configuration = storageBacked('config',
     </p>
 
 </template>
-
-<style>
-
-</style>
