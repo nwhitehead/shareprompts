@@ -145,12 +145,32 @@ impl std::convert::From<serde_json::Error> for LocalError {
     }
 }
 
+#[derive(Deserialize)]
+struct GoogleTokenCheckResponse
+{
+    user_id: String
+}
+
 #[post("/api/conversation")]
 async fn post_conversation(
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
     println!("Got a POST");
+    let client = awc::Client::new();
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", form.token.clone());
+    let res = client
+        .get(google_validate_url)
+        .send()
+        .await
+        .unwrap()
+        .json::<GoogleTokenCheckResponse>()
+        .await;
+    let userid =
+        match res {
+            Ok(resok) => resok.user_id,
+            Err(_) => return Err(error::ErrorInternalServerError("hi")),
+        };
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
         let mut conn = pool.get()?;
@@ -163,7 +183,7 @@ async fn post_conversation(
             public: form.public,
             research: form.research,
             creationdate: chrono::Utc::now().into(),
-            user_id: "nathan".to_string(),
+            user_id: userid,
         };
         use self::schema::conversations::dsl::*;
         diesel::insert_into(conversations)
