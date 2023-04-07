@@ -1366,6 +1366,7 @@ dependencies = [
  "diesel_migrations",
  "dotenvy",
  "env_logger",
+ "log",
  "rustls 0.21.0",
  "serde",
  "serde_json",

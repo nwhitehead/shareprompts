@@ -17,3 +17,4 @@ serde_json = "1.0"
 rustls = "0.21.0"
 awc = { version = "3.1.1", features = ["rustls"] }
 diesel_migrations = "2.0.0"
+log = "0.4.17"

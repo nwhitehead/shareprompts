@@ -2,6 +2,7 @@ extern crate diesel;
 
 mod schema;
 
+use log::{info};
 use actix_web::{error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
@@ -97,8 +98,6 @@ async fn get_conversation(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        // Check for pending migrations
-        conn.run_pending_migrations(MIGRATIONS)?;
         find_conversation_by_id(&mut conn, uid)
     })
     .await?
@@ -183,9 +182,6 @@ async fn post_conversation(
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
         let mut conn = pool.get()?;
-        // Check for pending migrations
-        conn.run_pending_migrations(MIGRATIONS)?;
-
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
             id: new_uuid.clone(),
@@ -209,6 +205,14 @@ async fn post_conversation(
     Ok(HttpResponse::Created().json(convo_id))
 }
 
+fn initialize_db_pool() -> DbPool {
+    let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");
+    let manager = DbConnectionManager::new(conn_spec);
+    diesel::r2d2::Pool::builder()
+        .build(manager)
+        .expect("database URL should be valid path to Postgres database with username and password")
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Set debug log level by default unless you set things manually from .env file
@@ -216,6 +220,15 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     // Initialize database pool outside server and copy it in
     let pool = initialize_db_pool();
+    let mut conn = pool.get().expect("db pool could not produce a connection");
+    // Check for pending migrations
+    info!("Checking for pending database migrations (stored internally to binary)");
+    let cnt = conn.pending_migrations(MIGRATIONS).expect("could not get list of migrations").len();
+    if cnt > 0 {
+        info!("Applying {} pending migrations", cnt);
+        conn.run_pending_migrations(MIGRATIONS).expect("could not run pending migrations");
+    }
+
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
@@ -226,12 +239,4 @@ async fn main() -> std::io::Result<()> {
     .bind("0.0.0.0:9090")?
     .run()
     .await
-}
-
-fn initialize_db_pool() -> DbPool {
-    let conn_spec = std::env::var("DATABASE_URL").expect("DATABASE_URL should be set");
-    let manager = DbConnectionManager::new(conn_spec);
-    diesel::r2d2::Pool::builder()
-        .build(manager)
-        .expect("database URL should be valid path to Postgres database with username and password")
 }
