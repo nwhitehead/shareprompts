@@ -1,0 +1,25 @@
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name {{ server_name }} www.{{ server_name }};
+
+    root {{ document_root }};
+
+    index index.html;
+
+    location /api/ {
+        client_max_body_size 2M;
+        proxy_pass http://127.0.0.1:9090/;
+    }
+
+    location / {
+        # Get default MIME types
+        include /etc/nginx/mime.types;
+        # Add WASM type
+        types {
+            application/wasm wasm;
+        }
+        try_files $uri $uri/ =404;
+    }
+}

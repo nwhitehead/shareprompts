@@ -2,7 +2,7 @@ extern crate diesel;
 
 mod schema;
 
-use actix_web::{error, get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +91,6 @@ async fn get_conversation(
     pool: web::Data<DbPool>,
     id: web::Path<(String,)>,
 ) -> actix_web::Result<impl Responder> {
-    println!("Got a GET");
     let uid = id.into_inner().0;
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
@@ -156,20 +155,19 @@ async fn post_conversation(
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
-    println!("Got a POST");
     let client = awc::Client::new();
     let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", form.token.clone());
     let res = client
         .get(google_validate_url)
         .send()
         .await
-        .unwrap()
+        .map_err(error::ErrorInternalServerError)?
         .json::<GoogleTokenCheckResponse>()
         .await;
     let userid =
         match res {
             Ok(resok) => resok.user_id,
-            Err(_) => return Err(error::ErrorInternalServerError("hi")),
+            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
         };
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
@@ -206,6 +204,7 @@ async fn main() -> std::io::Result<()> {
     let pool = initialize_db_pool();
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
             .service(get_conversation)
             .service(post_conversation)

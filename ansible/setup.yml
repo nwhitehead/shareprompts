@@ -1,0 +1,45 @@
+- hosts: "{{ variable_host | default('server') }}"
+  vars:
+    server_name: "{{ inventory_hostname }}"
+    document_root: /var/www/shareprompts
+  tasks:
+    - name: Create app directory
+      file:
+        path: /app/shareprompts
+        state: directory
+    - name: Create rust service
+      copy:
+        src: shareprompts-backend-api.service
+        dest: /etc/systemd/system/shareprompts-backend-api.service
+    - name: Enable backend API rust service
+      service:
+        name: shareprompts-backend-api.service
+        enabled: yes
+    - name: Ensure Nginx is at the latest version
+      apt: name=nginx state=latest
+    - name: Allow Nginx through ufw firewall
+      ufw:
+        rule: allow
+        name: Nginx Full
+        state: enabled
+    - name: Setup Nginx appserver site
+      template:
+        src: ../nginx.conf.j2
+        dest: /etc/nginx/sites-available/default
+      notify: Restart Nginx
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+      notify: Restart Nginx
+    - name: Start Nginx
+      service:
+          name: nginx
+          state: started
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
