@@ -1,8 +1,58 @@
 - hosts: "{{ variable_host | default('server') }}"
   vars:
-    server_name: "{{ inventory_hostname }}"
-    document_root: /var/www/shareprompts
+    postgresql_version: "14"
+    postgresql_bin_path: "/usr/lib/postgresql/{{ postgresql_version }}/bin"
+    postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    ansible_ssh_pipelining: true
   tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - libpq-dev
+          - python3-psycopg2
+        state: present
+    - name: Check if PostgreSQL is initialized
+      ansible.builtin.stat:
+        path: "{{ postgresql_data_dir }}/pg_hba.conf"
+      register: postgres_data
+    - name: Empty data dir
+      ansible.builtin.file:
+        path: "{{ postgresql_data_dir }}"
+        state: absent
+      when: not postgres_data.stat.exists
+    - name: Initialize PostgreSQL
+      ansible.builtin.shell: "{{ postgresql_bin_path }}/initdb -D {{ postgresql_data_dir }}"
+      become: true
+      become_user: postgres
+      when: not postgres_data.stat.exists
+    - name: Start and enable service
+      ansible.builtin.service:
+        name: postgresql
+        enabled: yes
+    - name: "Create app database"
+      postgresql_db:
+        state: present
+        name: "{{ db_name }}"
+      become: yes
+      become_user: postgres
+    - name: "Create db user"
+      postgresql_user:
+        state: present
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+      become: yes
+      become_user: postgres
+    - name: "Grant db user access to app db"
+      postgresql_privs:
+        type: database
+        database: "{{ db_name }}"
+        roles: "{{ db_user }}"
+        grant_option: no
+        privs: all
+      become: yes
+      become_user: postgres
     - name: Create app directory
       file:
         path: /app/shareprompts
@@ -11,6 +61,17 @@
       copy:
         src: shareprompts-backend-api.service
         dest: /etc/systemd/system/shareprompts-backend-api.service
+      notify: Restart shareprompts-backend-api
+    - name: Synchronize backend executable files
+      synchronize:
+        src: ../backend/target/release/shareprompts-backend-api
+        dest: /app/shareprompts/
+      notify: Restart shareprompts-backend-api
+    - name: Copying db env
+      copy:
+        src: ../backend/.env
+        dest: /app/shareprompts/.env
+      notify: Restart shareprompts-backend-api
     - name: Enable backend API rust service
       service:
         name: shareprompts-backend-api.service
@@ -24,13 +85,13 @@
         state: enabled
     - name: Setup Nginx appserver site
       template:
-        src: ../nginx.conf.j2
-        dest: /etc/nginx/sites-available/default
+        src: ../site.conf
+        dest: /etc/nginx/sites-available/shareprompts
       notify: Restart Nginx
     - name: Enable Nginx site
       file:
-        src: /etc/nginx/sites-available/default
-        dest: /etc/nginx/sites-enabled/default
+        src: /etc/nginx/sites-available/shareprompts
+        dest: /etc/nginx/sites-enabled/shareprompts
         state: link
       notify: Restart Nginx
     - name: Start Nginx
@@ -42,4 +103,8 @@
     - name: Restart Nginx
       service:
         name: nginx
+        state: restarted
+    - name: Restart shareprompts-backend-api
+      service:
+        name: shareprompts-backend-api
         state: restarted

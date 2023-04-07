@@ -1,0 +1,17 @@
+- hosts: "{{ variable_host | default('server') }}"
+  tasks:
+    - name: Synchronize site files
+      synchronize:
+        src: ../site/
+        dest: /var/www/shareprompts/
+    - name: Synchronize backend executable files
+      synchronize:
+        src: ../backend/target/release/shareprompts-backend-api
+        dest: /app/shareprompts/
+      notify: Restart shareprompts-backend-api
+
+  handlers:
+    - name: Restart shareprompts-backend-api
+      service:
+        name: shareprompts-backend-api
+        state: restarted

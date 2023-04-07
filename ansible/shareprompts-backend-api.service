@@ -7,7 +7,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/app/shareprompts/api.server
+ExecStart=/app/shareprompts/shareprompts-backend-api
 WorkingDirectory=/app/shareprompts
 Restart=always
 RestartSec=5

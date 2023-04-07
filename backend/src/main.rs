@@ -13,6 +13,8 @@ type DbPool = diesel::r2d2::Pool<DbConnectionManager>;
 type DbError = Box<dyn std::error::Error + Send + Sync>;
 
 use schema::conversations;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Model for conversations in the database with all fields
 #[derive(Debug, Clone, Queryable, Insertable)]
@@ -86,7 +88,7 @@ fn find_conversation_by_id(
     }
 }
 
-#[get("/api/conversation/{id}")]
+#[get("/conversation/{id}")]
 async fn get_conversation(
     pool: web::Data<DbPool>,
     id: web::Path<(String,)>,
@@ -95,6 +97,8 @@ async fn get_conversation(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
+        // Check for pending migrations
+        conn.run_pending_migrations(MIGRATIONS)?;
         find_conversation_by_id(&mut conn, uid)
     })
     .await?
@@ -121,26 +125,33 @@ async fn get_conversation(
 
 #[derive(Debug)]
 enum LocalError {
-    DBConnectionProblem(diesel::r2d2::PoolError),
-    SerializationFailed(serde_json::Error),
+    DbConnectionProblem,
+    SerializationFailed,
+    DbError,
 }
 
 impl std::fmt::Display for LocalError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            LocalError::DBConnectionProblem(..) => write!(f, "problem with r2d2 db connection"),
-            LocalError::SerializationFailed(..) => write!(f, "json serialization of contents failed"),
+            LocalError::DbConnectionProblem => write!(f, "problem with r2d2 db connection"),
+            LocalError::SerializationFailed => write!(f, "json serialization of contents failed"),
+            LocalError::DbError => write!(f, "problem with db connection"),
         }
     }
 }
 impl std::convert::From<r2d2::PoolError> for LocalError {
-    fn from(err: r2d2::PoolError) -> LocalError {
-        LocalError::DBConnectionProblem(err)
+    fn from(_err: r2d2::PoolError) -> LocalError {
+        LocalError::DbConnectionProblem
     }
 }
 impl std::convert::From<serde_json::Error> for LocalError {
-    fn from(err: serde_json::Error) -> LocalError {
-        LocalError::SerializationFailed(err)
+    fn from(_err: serde_json::Error) -> LocalError {
+        LocalError::SerializationFailed
+    }
+}
+impl std::convert::From<DbError> for LocalError {
+    fn from(_err: DbError) -> LocalError {
+        LocalError::DbError
     }
 }
 
@@ -150,7 +161,7 @@ struct GoogleTokenCheckResponse
     user_id: String
 }
 
-#[post("/api/conversation")]
+#[post("/conversation")]
 async fn post_conversation(
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
@@ -172,6 +183,9 @@ async fn post_conversation(
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
         let mut conn = pool.get()?;
+        // Check for pending migrations
+        conn.run_pending_migrations(MIGRATIONS)?;
+
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
             id: new_uuid.clone(),
@@ -199,7 +213,7 @@ async fn post_conversation(
 async fn main() -> std::io::Result<()> {
     // Set debug log level by default unless you set things manually from .env file
     dotenvy::dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     // Initialize database pool outside server and copy it in
     let pool = initialize_db_pool();
     HttpServer::new(move || {
