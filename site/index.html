@@ -6,13 +6,45 @@
 <body>
     <p>This is the main website.</p>
     <div id="app"></div>
-    <script type="module">
+
+<script type="module">
 
 import { createApp } from 'vue';
+import { createRouter, createWebHistory } from 'vue-router';
+
 import App from './src/App.vue';
+import NotFound from './src/views/NotFound.vue';
+import About from './src/views/About.vue';
+import Conversation from './src/views/Conversation.vue';
 
-createApp(App).mount('#app');
+const routes = [
+    {
+        path: '/about',
+        name: 'About',
+        component: About,
+    },
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        component: NotFound,
+    },
+    {
+        path: '/conversation/:id',
+        name: 'Conversation',
+        component: Conversation,
+    },
+];
 
-    </script>
+const router = createRouter({
+    routes,
+    history: createWebHistory(),
+});
+
+createApp(App)
+    .use(router)
+    .mount('#app');
+
+</script>
+
 </body>
 </html>

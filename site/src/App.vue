@@ -1,15 +1,17 @@
 
 <script setup>
 
-const url_params = new URLSearchParams(window.location.search);
-const id = url_params.get('id');
+// const url_params = new URLSearchParams(window.location.search);
+// const id = url_params.get('id');
 
-console.log('App.vue setup', url_params);
+// console.log('App.vue setup', url_params);
 
 </script>
 
 <template>
-    <h1>A Conversation</h1>
+    <p><router-link to="/about">Go to About</router-link></p>
+    
+    <p><router-link to="/conversation/1234">Test convo</router-link></p>
 
-    <p>Here is the conversation you requested: {{ id || "none" }}</p>
+    <router-view></router-view>
 </template>
