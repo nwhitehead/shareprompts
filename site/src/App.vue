@@ -1,12 +1,11 @@
 
 <script setup>
-
+import NavBar from './components/NavBar.vue';
+import '../index.css';
 </script>
 
 <template>
-    <p><router-link to="/about">Go to About</router-link></p>
-    
-    <p><router-link to="/conversation/56f3c2c3e30e4f28a4497a51e6acf08b">Test convo</router-link></p>
-
+    <h1 className="text-3xl font-bold underline text-blue-500">Conversation</h1>
+    <NavBar />
     <router-view></router-view>
 </template>
