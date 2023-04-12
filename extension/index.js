@@ -7,6 +7,7 @@ async function handleClick(button) {
 
     button.textContent = "Sharing...";
     button.style.cursor = "initial";
+    button.disabled = true;
 
     const threadContainer = document.querySelector("main div .flex");
 
@@ -22,7 +23,6 @@ async function handleClick(button) {
     const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
     const conversationData = {
         avatar,
-        model,
         dialog: [],
     };
     // Fill out dialog part
@@ -45,13 +45,43 @@ async function handleClick(button) {
         } else if (markdown) {
             conversationData.dialog.push({
                 who: "gpt",
-                wnat: markdown.outerHTML,
+                what: markdown.outerHTML,
             });
         }
     }
     console.log('config', config);
     console.log('conversationData', conversationData);
     console.log('oauth2 token', token);
+    // Actually POST it
+    console.log('POSTing');
+    const addr = `https://shareconversation.com/api/conversation`;
+    console.log(`addr=${addr}`);
+    const data = {
+        title: 'TestTitle',
+        model,
+        public: config.public,
+        research: config.research,
+        token,
+        contents: conversationData,
+    };
+    const options = {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+            'content-type': 'application/json',
+        },
+        body: JSON.stringify(data, null, 2),
+    };
+    console.log('fetch POST options', options);
+    const response = await fetch(addr, options);
+    const jsondata = await response.json();
+    console.log('Conversation data is', jsondata);
+    // Go to new tab with fresh convo
+    const url = `https://shareconversation.com/conversation/${jsondata}`;
+    button.textContent = "Share";
+    button.style.cursor = "pointer";
+    button.disabled = false;
+    window.open(url, '_blank').focus();
 }
 
 function addButton() {
