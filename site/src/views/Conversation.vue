@@ -1,15 +1,16 @@
 <script setup>
 
-import { onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import ChatGPTIcon from '../../chatgpt.png';
+import SpeakerIcon from '../components/SpeakerIcon.vue';
+
+const conversationData = ref(null);
 
 async function getData(id) {
-    console.log('Getting data for conversation', id);
     const addr = `https://shareconversation.com/api/conversation/${id}`;
-    console.log(`addr=${addr}`);
     const response = await fetch(addr);
     const jsondata = await response.json();
-    console.log('Conversation data is', jsondata);
     return jsondata;
 }
 
@@ -18,12 +19,27 @@ const route = useRoute();
 onMounted(async () => {
     const id = route.params.id;
     const jsondata = await getData(id);
+    conversationData.value = jsondata;
+});
+
+const avatar = computed(() => {
+    if (!conversationData.value) return "";
+    return conversationData.value.contents.avatar;
+});
+
+const dialog = computed(() => {
+    if (!conversationData.value) return [];
+    return conversationData.value.contents.dialog;
 });
 
 </script>
 
 <template>
-    <h1>A Conversation</h1>
 
-    <p>Here is the conversation you requested: {{ $route.params.id }}</p>
+    <p v-for="turn in dialog">
+        <SpeakerIcon :src="avatar" v-if="turn.who === 'human'" />
+        <SpeakerIcon :src="ChatGPTIcon" v-if="turn.who === 'gpt'" />
+        {{turn.what}}
+    </p>
+
 </template>
