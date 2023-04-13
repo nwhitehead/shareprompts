@@ -44,6 +44,24 @@ function striped(i) {
 
 </script>
 
+<style>
+ol {
+    @apply list-decimal;
+    @apply list-inside;
+    @apply pb-4;
+}
+ul {
+    @apply list-disc;
+    @apply list-inside;
+    @apply pb-4;
+}
+p {
+    @apply pb-4;
+    @apply break-words;
+    @apply whitespace-pre-wrap;
+}
+</style>
+
 <template>
     <div class="flex flex-col text-gray-700">
         <div class="group w-full border-b" :class="striped(index)" v-for="(turn, index) in dialog">
@@ -52,7 +70,8 @@ function striped(i) {
                     <SpeakerIcon :src="avatar" v-if="turn.who === 'human'" />
                     <SpeakerIcon :src="ChatGPTIcon" v-if="turn.who === 'gpt'" />
                 </div>
-                <p>{{turn.what}}</p>
+                <p v-if="turn.who === 'human'">{{turn.what}}</p>
+                <p v-if="turn.who === 'gpt'" v-html="turn.what"></p>
             </div>
         </div>
     </div>
