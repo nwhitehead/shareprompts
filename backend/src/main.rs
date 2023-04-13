@@ -62,6 +62,7 @@ pub struct ConversationInfo {
     pub contents: ConversationContents,
     pub public: bool,
     pub research: bool,
+    pub model: String,
     pub creationdate: std::time::SystemTime,
 }
 
@@ -110,6 +111,7 @@ async fn get_conversation(
                 contents: serde_json::from_str(&conv.contents)?,
                 public: conv.public,
                 research: conv.research,
+                model: conv.model,
                 creationdate: conv.creationdate,
             };
             Ok(HttpResponse::Ok().json(conversation_info))
