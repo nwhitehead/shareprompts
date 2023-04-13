@@ -1,11 +1,16 @@
 <script setup>
 
-import { ref, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { ref, computed, onMounted, onUpdated } from 'vue';
 import ChatGPTIcon from '../../chatgpt.png';
 import SpeakerIcon from '../components/SpeakerIcon.vue';
 
+import hljs from 'highlight.js';
+import 'highlight.js/styles/stackoverflow-dark.css';
+
+const props = defineProps(['id']);
+
 const conversationData = ref(null);
+const domref = ref(null);
 
 async function getData(id) {
     const addr = `https://shareconversation.com/api/conversation/${id}`;
@@ -14,12 +19,18 @@ async function getData(id) {
     return jsondata;
 }
 
-const route = useRoute();
-
 onMounted(async () => {
-    const id = route.params.id;
+    const id = props.id;
     const jsondata = await getData(id);
     conversationData.value = jsondata;
+});
+
+onUpdated(() => {
+    console.log('Updated DOM for conversation');
+    console.log(domref);
+    // domref.value.querySelectorAll('pre code').forEach((el) => {
+    //     console.log(el);
+    // });
 });
 
 const avatar = computed(() => {
@@ -36,9 +47,9 @@ const model = computed(() => {
     if (!conversationData.value) return "";
     return conversationData.value.model;
 });
-function striped(i) {
+function striped(turn) {
     return {
-        'bg-gray-50': (i % 2 === 0)
+        'bg-gray-50': (turn.who === 'gpt')
     }
 }
 
@@ -47,8 +58,8 @@ function striped(i) {
 <style>
 ol {
     @apply list-decimal;
-    @apply list-inside;
-    @apply pb-4;
+    @apply list-outside;
+    @apply pb-4 pl-4;
 }
 ul {
     @apply list-disc;
@@ -60,12 +71,24 @@ p {
     @apply break-words;
     @apply whitespace-pre-wrap;
 }
+code:not(.hljs) {
+    font-weight: 700;
+}
+code:not(.hljs)::before {
+    font-weight: 700;
+    content: '`';
+}
+code:not(.hljs)::after {
+    font-weight: 700;
+    content: '`';
+}
 </style>
 
 <template>
-    <div class="flex flex-col text-gray-700">
-        <div class="group w-full border-b" :class="striped(index)" v-for="(turn, index) in dialog">
-            <div class="container mx-auto gap-4 p-4 flex">
+    <div class="flex flex-col text-gray-700" ref="domref">
+        <p class="container mx-auto p-4" v-if="conversationData === null">Loading...</p>
+        <div class="group w-full border-b" :class="striped(turn)" v-for="turn in dialog">
+            <div class="container mx-auto gap-x-6 p-4 flex">
                 <div class="w-[30px] flex-none">
                     <SpeakerIcon :src="avatar" v-if="turn.who === 'human'" />
                     <SpeakerIcon :src="ChatGPTIcon" v-if="turn.who === 'gpt'" />

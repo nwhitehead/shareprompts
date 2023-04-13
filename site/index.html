@@ -4,7 +4,6 @@
     <title>Share Conversation</title>
 </head>
 <body>
-    <p>This is the main website.</p>
     <div id="app"></div>
 
 <script type="module">
@@ -24,14 +23,15 @@ const routes = [
         component: About,
     },
     {
-        path: '/:pathMatch(.*)*',
-        name: 'NotFound',
-        component: NotFound,
-    },
-    {
         path: '/conversation/:id',
         name: 'Conversation',
         component: Conversation,
+        props: true,
+    },
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        component: NotFound,
     },
 ];
 
