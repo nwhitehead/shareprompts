@@ -56,6 +56,9 @@ function striped(turn) {
 </script>
 
 <style>
+a {
+    @apply underline;
+}
 ol {
     @apply list-decimal;
     @apply list-outside;
@@ -100,8 +103,8 @@ code:not(.hljs)::after {
     </div>
     <div class="p-4 container mx-auto text-black/50 text-xs">
         <p>{{model}}</p>
-        <p>This conversation was recorded from <a href="https://chat.openai.com/" class="underline">https://chat.openai.com/</a>.
-        </p>
+        <p>This conversation was recorded from <a href="https://chat.openai.com/">https://chat.openai.com/</a>.</p>
+        <p><a href="/">ShareConversation</a> has no affiliation with OpenAI or ChatGPT.</p>
     </div>
 
 </template>

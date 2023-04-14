@@ -36,7 +36,14 @@ const configuration = storageBacked('config',
     </p>
 
     <p>
-        Note: Anyone that has the link to a conversation can see it. Conversations cannot be unpublished.
+        Note: Anyone that has the link to a conversation can see it. The "public" option includes the
+        conversation in public lists.
+    </p>
+    <p> Note: Do not include personally identifying information in the conversations you share.
+    </p>
+    <p>
+        Note: You can delete previously shared conversations from this website but this cannot delete
+        any archived copies that others have saved while the conversation was shared.
     </p>
 
 </template>
