@@ -69,6 +69,7 @@ async function handleClick(button) {
         mode: 'cors',
         headers: {
             'content-type': 'application/json',
+            'authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(data, null, 2),
     };

@@ -96,6 +96,19 @@ fn find_conversation_by_id(
     }
 }
 
+// Look in DB for specific ID an return DB Conversation if found
+fn find_conversations_by_user(
+    conn: &mut DbConnection,
+    uid: &String,
+) -> Result<Vec<Conversation>, DbError> {
+    use self::schema::conversations::dsl::*;
+    let results = conversations
+        .filter(user_id.eq(uid))
+        .load::<Conversation>(conn)
+        .expect("Error finding conversation");
+    Ok(results)
+}
+
 #[get("/conversation/{id}")]
 async fn get_conversation(
     pool: web::Data<DbPool>,
@@ -129,6 +142,40 @@ async fn get_conversation(
         }
     }
 }
+
+// #[post("/conversations/{uid}")]
+// async fn get_my_conversations(
+//     pool: web::Data<DbPool>,
+//     id: web::Path<(String,)>,
+// ) -> actix_web::Result<impl Responder> {
+//     let uid = id.into_inner().0;
+//     // Don't block server thread, db stuff is synchronous
+//     let conversation = web::block(move || {
+//         let mut conn = pool.get()?;
+//         find_conversation_by_id(&mut conn, &uid)
+//     })
+//     .await?
+//     .map_err(error::ErrorInternalServerError)?;
+//     match conversation {
+//         Some(conv) => {
+//             let conversation_info = ConversationInfo {
+//                 id: conv.id.clone(),
+//                 title: conv.title.clone(),
+//                 contents: serde_json::from_str(&conv.contents)?,
+//                 public: conv.public,
+//                 research: conv.research,
+//                 model: conv.model,
+//                 creationdate: conv.creationdate,
+//             };
+//             Ok(HttpResponse::Ok().json(conversation_info))
+//         }
+//         None => {
+//             Ok(HttpResponse::NotFound().body(format!(
+//                 "Not found"
+//             )))
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 enum LocalError {
