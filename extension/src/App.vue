@@ -11,6 +11,11 @@ const configuration = storageBacked('config',
     })
 );
 
+function handleManage() {
+    console.log('Manage');
+    window.open('manage.html', '_blank');
+}
+
 </script>
 
 <template>
@@ -45,5 +50,7 @@ const configuration = storageBacked('config',
         Note: You can delete previously shared conversations from this website but this cannot delete
         any archived copies that others have saved while the conversation was shared.
     </p>
+
+    <button @click="handleManage">Manage my conversations</button>
 
 </template>
