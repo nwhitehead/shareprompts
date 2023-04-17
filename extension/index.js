@@ -54,7 +54,7 @@ async function handleClick(button) {
     // console.log('oauth2 token', token);
     // // Actually POST it
     // console.log('POSTing');
-    const addr = `https://shareconversation.com/api/conversation`;
+    const addr = `https://shareconversation.com/api/conversation/`;
     // console.log(`addr=${addr}`);
     const data = {
         title: 'TestTitle',

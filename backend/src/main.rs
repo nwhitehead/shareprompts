@@ -216,7 +216,7 @@ struct GoogleTokenCheckResponse
     user_id: String
 }
 
-#[post("/conversation")]
+#[post("/conversation/")]
 async fn post_conversation(
     auth: BearerAuth,
     pool: web::Data<DbPool>,

@@ -48,7 +48,7 @@ async function deleteAction(id) {
     console.log('Delete response is', response);
 }
 
-onMounted(async () => {
+async function updateConversationsFromServer() {
     if (token === null) {
         token = await getToken();
     }
@@ -67,6 +67,10 @@ onMounted(async () => {
     const jsondata = await response.json();
     console.log('Conversation data is', jsondata);
     conversations.value = jsondata;
+}
+
+onMounted(async () => {
+    updateConversationsFromServer();
 });
 
 </script>

@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, computed, onMounted, onUpdated } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ChatGPTIcon from '../../chatgpt.png';
 import SpeakerIcon from '../components/SpeakerIcon.vue';
 
@@ -23,14 +23,6 @@ onMounted(async () => {
     const id = props.id;
     const jsondata = await getData(id);
     conversationData.value = jsondata;
-});
-
-onUpdated(() => {
-    console.log('Updated DOM for conversation');
-    console.log(domref);
-    // domref.value.querySelectorAll('pre code').forEach((el) => {
-    //     console.log(el);
-    // });
 });
 
 const avatar = computed(() => {
