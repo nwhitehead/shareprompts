@@ -19,7 +19,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Model for conversations in the database with all fields
-#[derive(Debug, Clone, Queryable, Insertable, Serialize)]
+#[derive(Debug, Clone, Queryable, Insertable)]
 #[diesel(table_name = conversations)]
 pub struct Conversation {
     pub id: String,
@@ -94,13 +94,23 @@ fn find_conversation_by_id(
 fn find_conversations_by_user(
     conn: &mut DbConnection,
     uid: &String,
-) -> Result<Vec<Conversation>, DbError> {
+) -> Result<Vec<ConversationInfo>, DbError> {
     use self::schema::conversations::dsl::*;
-    let results = conversations
+    conversations
         .filter(user_id.eq(uid))
         .load::<Conversation>(conn)
-        .expect("Error finding conversation");
-    Ok(results)
+        .expect("Error finding conversation")
+        .iter()
+        .map(|conv| Ok(ConversationInfo {
+            id: conv.id.clone(),
+            title: conv.title.clone(),
+            contents: serde_json::from_str(&conv.contents)?,
+            public: conv.public,
+            research: conv.research,
+            model: conv.model.clone(),
+            creationdate: conv.creationdate,
+        }))
+        .collect()
 }
 
 #[get("/conversation/{id}")]
@@ -329,6 +339,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_conversation)
             .service(post_conversation)
             .service(delete_conversation)
+            .service(get_my_conversations)
     })
     .bind("0.0.0.0:9090")?
     .run()
