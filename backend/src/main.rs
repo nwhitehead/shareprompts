@@ -3,7 +3,7 @@ extern crate diesel;
 mod schema;
 
 use log::{info};
-use actix_web::{error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{delete, error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
 
@@ -66,10 +66,16 @@ pub struct ConversationInfo {
     pub creationdate: std::time::SystemTime,
 }
 
+// Information that is required when deleting conversation
+#[derive(Serialize, Deserialize)]
+pub struct DeleteConversation {
+    pub token: String,
+}
+
 // Look in DB for specific ID an return DB Conversation if found
 fn find_conversation_by_id(
     conn: &mut DbConnection,
-    convo_id: String,
+    convo_id: &String,
 ) -> Result<Option<Conversation>, DbError> {
     use self::schema::conversations::dsl::*;
     let results = conversations
@@ -99,7 +105,7 @@ async fn get_conversation(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversation_by_id(&mut conn, uid)
+        find_conversation_by_id(&mut conn, &uid)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -129,6 +135,7 @@ enum LocalError {
     DbConnectionProblem,
     SerializationFailed,
     DbError,
+    AuthorizationProblem,
 }
 
 impl std::fmt::Display for LocalError {
@@ -137,6 +144,7 @@ impl std::fmt::Display for LocalError {
             LocalError::DbConnectionProblem => write!(f, "problem with r2d2 db connection"),
             LocalError::SerializationFailed => write!(f, "json serialization of contents failed"),
             LocalError::DbError => write!(f, "problem with db connection"),
+            LocalError::AuthorizationProblem => write!(f, "authorization problem"),
         }
     }
 }
@@ -215,6 +223,52 @@ fn initialize_db_pool() -> DbPool {
         .expect("database URL should be valid path to Postgres database with username and password")
 }
 
+#[delete("/conversation/{id}")]
+async fn delete_conversation(
+    pool: web::Data<DbPool>,
+    id: web::Path<(String,)>,
+    form: web::Json<DeleteConversation>,
+) -> actix_web::Result<impl Responder> {
+    let uid = id.into_inner().0;
+    let client = awc::Client::new();
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", form.token.clone());
+    let res = client
+        .get(google_validate_url)
+        .send()
+        .await
+        .map_err(error::ErrorInternalServerError)?
+        .json::<GoogleTokenCheckResponse>()
+        .await;
+    let userid =
+        match res {
+            Ok(resok) => resok.user_id,
+            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
+        };
+    web::block(move || -> Result<(), LocalError> {
+        let mut conn = pool.get()?;
+        let convo = find_conversation_by_id(&mut conn, &uid)?;
+        match convo {
+            Some(conv) => {
+                use self::schema::conversations::dsl::*;
+                if conv.user_id != userid {
+                    Err(LocalError::AuthorizationProblem)
+                } else {
+                    diesel::delete(conversations.filter(id.eq(uid)))
+                        .execute(& mut conn)
+                        .expect("Error deleting conversation");
+                    Ok(())
+                }
+            }
+            _ => {
+                Err(LocalError::AuthorizationProblem)
+            }
+        }
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().into())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Set debug log level by default unless you set things manually from .env file
@@ -237,6 +291,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .service(get_conversation)
             .service(post_conversation)
+            .service(delete_conversation)
     })
     .bind("0.0.0.0:9090")?
     .run()
