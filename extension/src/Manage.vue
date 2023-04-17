@@ -3,6 +3,7 @@
 import { onMounted, ref } from 'vue';
 
 const MAXLENGTH = 20;
+let token = null;
 
 async function getToken() {
     const msg = await chrome.runtime.sendMessage({type: "get_configuration"});
@@ -29,8 +30,28 @@ function link(id) {
     return `https://shareconversation.com/conversation/${id}`;
 }
 
+async function deleteAction(id) {
+    if (token === null) {
+        token = await getToken();
+    }
+    console.log(`Got token ${token}`);
+    const addr = `https://shareconversation.com/api/conversation/${id}`;
+    const options = {
+        method: 'DELETE',
+        mode: 'cors',
+        headers: {
+            'authorization': `Bearer ${token}`,
+        },
+    };
+    console.log('Options', options);
+    const response = await fetch(addr, options);
+    console.log('Delete response is', response);
+}
+
 onMounted(async () => {
-    const token = await getToken();
+    if (token === null) {
+        token = await getToken();
+    }
     console.log(`Got token ${token}`);
     const addr = `https://shareconversation.com/api/conversations`;
     const options = {
@@ -55,7 +76,10 @@ onMounted(async () => {
     <h2>Manage Conversations</h2>
 
     <p v-for="item in conversations">
-        <a :href="link(item.id)">{{ item.id }}</a> - {{ firstLine(item) }} - {{ dateRepresentation(item.creationdate) }}
+        <a :href="link(item.id)">{{ item.id }}</a>
+        - {{ firstLine(item) }}
+        - {{ dateRepresentation(item.creationdate) }}
+        - <button @click="deleteAction(item.id)">Delete</button>
     </p>
 
 </template>
