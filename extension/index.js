@@ -61,7 +61,6 @@ async function handleClick(button) {
         model,
         public: config.public,
         research: config.research,
-        token,
         contents: conversationData,
     };
     const options = {

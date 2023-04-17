@@ -6,6 +6,7 @@ use log::{info};
 use actix_web::{delete, error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 // Types related to Postgres connection to database
 type DbConnection = diesel::pg::PgConnection;
@@ -18,7 +19,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Model for conversations in the database with all fields
-#[derive(Debug, Clone, Queryable, Insertable)]
+#[derive(Debug, Clone, Queryable, Insertable, Serialize)]
 #[diesel(table_name = conversations)]
 pub struct Conversation {
     pub id: String,
@@ -51,7 +52,6 @@ pub struct NewConversation {
     pub model: String,
     pub public: bool,
     pub research: bool,
-    pub token: String,
 }
 
 // Information returned from GET
@@ -64,12 +64,6 @@ pub struct ConversationInfo {
     pub research: bool,
     pub model: String,
     pub creationdate: std::time::SystemTime,
-}
-
-// Information that is required when deleting conversation
-#[derive(Serialize, Deserialize)]
-pub struct DeleteConversation {
-    pub token: String,
 }
 
 // Look in DB for specific ID an return DB Conversation if found
@@ -143,39 +137,34 @@ async fn get_conversation(
     }
 }
 
-// #[post("/conversations/{uid}")]
-// async fn get_my_conversations(
-//     pool: web::Data<DbPool>,
-//     id: web::Path<(String,)>,
-// ) -> actix_web::Result<impl Responder> {
-//     let uid = id.into_inner().0;
-//     // Don't block server thread, db stuff is synchronous
-//     let conversation = web::block(move || {
-//         let mut conn = pool.get()?;
-//         find_conversation_by_id(&mut conn, &uid)
-//     })
-//     .await?
-//     .map_err(error::ErrorInternalServerError)?;
-//     match conversation {
-//         Some(conv) => {
-//             let conversation_info = ConversationInfo {
-//                 id: conv.id.clone(),
-//                 title: conv.title.clone(),
-//                 contents: serde_json::from_str(&conv.contents)?,
-//                 public: conv.public,
-//                 research: conv.research,
-//                 model: conv.model,
-//                 creationdate: conv.creationdate,
-//             };
-//             Ok(HttpResponse::Ok().json(conversation_info))
-//         }
-//         None => {
-//             Ok(HttpResponse::NotFound().body(format!(
-//                 "Not found"
-//             )))
-//         }
-//     }
-// }
+#[get("/conversations")]
+async fn get_my_conversations(
+    auth: BearerAuth,
+    pool: web::Data<DbPool>,
+) -> actix_web::Result<impl Responder> {
+    let client = awc::Client::new();
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
+    let res = client
+        .get(google_validate_url)
+        .send()
+        .await
+        .map_err(error::ErrorInternalServerError)?
+        .json::<GoogleTokenCheckResponse>()
+        .await;
+    let userid =
+        match res {
+            Ok(resok) => resok.user_id,
+            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
+        };
+    // Don't block server thread, db stuff is synchronous
+    let conversations = web::block(move || {
+        let mut conn = pool.get()?;
+        find_conversations_by_user(&mut conn, &userid)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(conversations))
+}
 
 #[derive(Debug)]
 enum LocalError {
@@ -219,11 +208,12 @@ struct GoogleTokenCheckResponse
 
 #[post("/conversation")]
 async fn post_conversation(
+    auth: BearerAuth,
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
     let client = awc::Client::new();
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", form.token.clone());
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
     let res = client
         .get(google_validate_url)
         .send()
@@ -272,13 +262,13 @@ fn initialize_db_pool() -> DbPool {
 
 #[delete("/conversation/{id}")]
 async fn delete_conversation(
+    auth: BearerAuth,
     pool: web::Data<DbPool>,
     id: web::Path<(String,)>,
-    form: web::Json<DeleteConversation>,
 ) -> actix_web::Result<impl Responder> {
     let uid = id.into_inner().0;
     let client = awc::Client::new();
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", form.token.clone());
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
     let res = client
         .get(google_validate_url)
         .send()
