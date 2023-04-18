@@ -18,11 +18,6 @@
           "matches": ["https://chat.openai.com/*"],
           "js": ["index.js"],
           "run_at": "document_end"
-        },
-        {
-            "matches": ["https://shareconversation.com/conversation/*"],
-            "js": ["manager.js"],
-            "run_at": "document_end"  
         }
     ],
     "background": {

@@ -2,7 +2,7 @@
 
 import { onMounted, ref } from 'vue';
 
-const MAXLENGTH = 20;
+const MAXLENGTH = 200;
 let token = null;
 
 async function getToken() {
