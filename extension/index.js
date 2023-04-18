@@ -20,6 +20,9 @@ async function handleClick(button) {
         model = document.querySelector("main a.underline").innerHTML;
     }
 
+    // Extract title from left panel
+    const title = document.querySelector('a.bg-gray-800 div').textContent;
+
     const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
     const conversationData = {
         avatar,
@@ -57,7 +60,7 @@ async function handleClick(button) {
     const addr = `https://shareconversation.com/api/conversation/`;
     // console.log(`addr=${addr}`);
     const data = {
-        title: 'TestTitle',
+        title,
         model,
         public: config.public,
         research: config.research,

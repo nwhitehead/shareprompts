@@ -39,6 +39,12 @@ const model = computed(() => {
     if (!conversationData.value) return "";
     return conversationData.value.model;
 });
+
+const title = computed(() => {
+    if (!conversationData.value) return "Loading";
+    return conversationData.value.title;
+});
+
 function striped(turn) {
     return {
         'bg-gray-50': (turn.who === 'gpt')
@@ -80,6 +86,22 @@ code:not(.hljs)::after {
 </style>
 
 <template>
+<div class="w-full h-full flex flex-col">
+    <div class="dark sticky top-0 bg-gray-800 items-center">
+        <div class="flex flex-row flex-1">
+            <button class="text-gray-200 p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </button>
+            <h1 class="text-gray-200 flex-1 text-center p-4">{{title}}</h1>
+            <button class="text-gray-200 p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+            </button>
+        </div>
+    </div>
     <div class="flex flex-col text-gray-700" ref="domref">
         <p class="container mx-auto p-4" v-if="conversationData === null">Loading...</p>
         <div class="group w-full border-b" :class="striped(turn)" v-for="turn in dialog">
@@ -98,5 +120,5 @@ code:not(.hljs)::after {
         <p>This conversation was recorded from <a href="https://chat.openai.com/">https://chat.openai.com/</a>.</p>
         <p><a href="/">ShareConversation</a> has no affiliation with OpenAI or ChatGPT.</p>
     </div>
-
+</div>
 </template>
