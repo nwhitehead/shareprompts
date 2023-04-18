@@ -10,6 +10,13 @@
 
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import VueSocialSharing from 'vue-social-sharing';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faFacebook } from '@fortawesome/free-brands-svg-icons';
+import { faTwitter } from '@fortawesome/free-brands-svg-icons';
+import { faReddit } from '@fortawesome/free-brands-svg-icons';
+library.add([faFacebook, faTwitter, faReddit]);
 
 import App from './src/App.vue';
 import NotFound from './src/views/NotFound.vue';
@@ -42,6 +49,7 @@ const router = createRouter({
 
 createApp(App)
     .use(router)
+    .use(VueSocialSharing)
     .mount('#app');
 
 </script>

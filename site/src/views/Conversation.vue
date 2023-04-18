@@ -1,8 +1,10 @@
 <script setup>
 
 import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import ChatGPTIcon from '../../chatgpt.png';
 import SpeakerIcon from '../components/SpeakerIcon.vue';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 import hljs from 'highlight.js';
 import 'highlight.js/styles/stackoverflow-dark.css';
@@ -43,6 +45,14 @@ const model = computed(() => {
 const title = computed(() => {
     if (!conversationData.value) return "Loading";
     return conversationData.value.title;
+});
+
+const url = computed(() => {
+    // const path = useRoute().fullPath;
+    // console.log(path);
+    // return path;
+    const path = `https://shareconversation.com/conversation/${props.id}`;
+    return path;
 });
 
 function striped(turn) {
@@ -89,13 +99,13 @@ code:not(.hljs)::after {
 <div class="w-full h-full flex flex-col">
     <div class="dark sticky top-0 bg-gray-800 items-center">
         <div class="flex flex-row flex-1">
-            <button class="text-gray-200 p-4">
+            <button class="text-gray-200 p-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
             </button>
-            <h1 class="text-gray-200 flex-1 text-center p-4">{{title}}</h1>
-            <button class="text-gray-200 p-4">
+            <h1 class="text-gray-200 flex-1 text-center p-2">{{title}}</h1>
+            <button class="text-gray-200 p-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
@@ -121,4 +131,29 @@ code:not(.hljs)::after {
         <p><a href="/">ShareConversation</a> has no affiliation with OpenAI or ChatGPT.</p>
     </div>
 </div>
+
+<hr>
+
+
+<div class="flex flex-row text-2xl text-gray-800">
+    <div class="flex-1 grow-0 m-4">
+        <ShareNetwork network="facebook" :url="url" :title="title" hashtags="ai">
+            <FontAwesomeIcon icon="fa-brands fa-facebook" />
+        </ShareNetwork>
+    </div>
+    <div class="flex-1 grow-0 m-4">
+        <ShareNetwork network="twitter" :url="url" :title="title" hashtags="ai">
+            <FontAwesomeIcon icon="fa-brands fa-twitter" />
+        </ShareNetwork>
+    </div>
+    <div class="flex-1 grow-0 m-4">
+        <ShareNetwork network="reddit" :url="url" :title="title" hashtags="ai">
+            <FontAwesomeIcon icon="fa-brands fa-reddit" />
+        </ShareNetwork>
+    </div>
+</div>
+
+<div class="p-[60px]">
+</div>
+
 </template>
