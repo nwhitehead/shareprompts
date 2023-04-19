@@ -1,0 +1,34 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+a {
+    @apply underline;
+}
+ol {
+    @apply list-decimal;
+    @apply list-outside;
+    @apply pb-4 pl-4;
+}
+ul {
+    @apply list-disc;
+    @apply list-inside;
+    @apply pb-4;
+}
+p {
+    @apply pb-4;
+    @apply break-words;
+    @apply whitespace-pre-wrap;
+}
+code:not(.hljs) {
+    font-weight: 700;
+}
+code:not(.hljs)::before {
+    font-weight: 700;
+    content: '`';
+}
+code:not(.hljs)::after {
+    font-weight: 700;
+    content: '`';
+}

@@ -19,3 +19,5 @@ awc = { version = "3.1.1", features = ["rustls"] }
 diesel_migrations = "2.0.0"
 log = "0.4.17"
 actix-web-httpauth = "0.8"
+handlebars = "3"
+base64 = "*"

@@ -7,6 +7,7 @@ use actix_web::{delete, error, get, middleware, post, web, App, HttpResponse, Ht
 use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use handlebars::{handlebars_helper, Handlebars};
 
 // Types related to Postgres connection to database
 type DbConnection = diesel::pg::PgConnection;
@@ -17,6 +18,15 @@ type DbError = Box<dyn std::error::Error + Send + Sync>;
 use schema::conversations;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+// Templates
+const INDEX_HBS: &str = include_str!("../site/index.hbs");
+const INDEX_CSS: &str = include_str!("../site/dist/index.css");
+const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
+
+// Check for string equality
+handlebars_helper!(nargs: |*args| args.len());
+handlebars_helper!(string_equal: |*args| args[0] == args[1]);
 
 // Model for conversations in the database with all fields
 #[derive(Debug, Clone, Queryable, Insertable)]
@@ -113,8 +123,8 @@ fn find_conversations_by_user(
         .collect()
 }
 
-#[get("/conversation/{id}")]
-async fn get_conversation(
+#[get("/conversation/json/{id}")]
+async fn get_conversation_json(
     pool: web::Data<DbPool>,
     id: web::Path<(String,)>,
 ) -> actix_web::Result<impl Responder> {
@@ -138,6 +148,43 @@ async fn get_conversation(
                 creationdate: conv.creationdate,
             };
             Ok(HttpResponse::Ok().json(conversation_info))
+        }
+        None => {
+            Ok(HttpResponse::NotFound().body(format!(
+                "Not found"
+            )))
+        }
+    }
+}
+
+#[get("/conversation/html/{id}")]
+async fn get_conversation_html(
+    pool: web::Data<DbPool>,
+    id: web::Path<(String,)>,
+) -> actix_web::Result<impl Responder> {
+    let uid = id.into_inner().0;
+    // Don't block server thread, db stuff is synchronous
+    let conversation = web::block(move || {
+        let mut conn = pool.get()?;
+        find_conversation_by_id(&mut conn, &uid)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    match conversation {
+        Some(conv) => {
+            let mut reg = Handlebars::new();
+            reg.register_helper("string_equal", Box::new(string_equal));
+            let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
+            let chatgpt_uri: String = format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
+            let body = reg.render_template(INDEX_HBS, &serde_json::json!({
+                "style": INDEX_CSS,
+                "title": conv.title,
+                "model": conv.model,
+                "avatar": contents.avatar,
+                "chatgpt_uri": chatgpt_uri,
+                "dialog": contents.dialog,
+            })).map_err(error::ErrorInternalServerError)?;
+            Ok(HttpResponse::Ok().body(body))
         }
         None => {
             Ok(HttpResponse::NotFound().body(format!(
@@ -336,7 +383,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
-            .service(get_conversation)
+            .service(get_conversation_json)
+            .service(get_conversation_html)
             .service(post_conversation)
             .service(delete_conversation)
             .service(get_my_conversations)
