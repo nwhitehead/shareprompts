@@ -1,10 +1,11 @@
 <script setup>
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import ChatGPTIcon from '../../chatgpt.png';
 import SpeakerIcon from '../components/SpeakerIcon.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { useHead } from '@unhead/vue';
 
 import hljs from 'highlight.js';
 import 'highlight.js/styles/stackoverflow-dark.css';
@@ -21,10 +22,15 @@ async function getData(id) {
     return jsondata;
 }
 
-onMounted(async () => {
-    const id = props.id;
-    const jsondata = await getData(id);
-    conversationData.value = jsondata;
+useHead({
+    title: 'My Awesome Site',
+    meta: [
+        { property: 'og:title', content: 'The Rockettes'},
+    ]
+});
+
+getData(props.id).then((response) => {
+    conversationData.value = response;
 });
 
 const avatar = computed(() => {

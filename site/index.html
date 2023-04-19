@@ -1,8 +1,5 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Share Conversation</title>
-</head>
 <body>
     <div id="app"></div>
 
@@ -10,6 +7,8 @@
 
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import { createHead } from '@unhead/vue';
+
 import VueSocialSharing from 'vue-social-sharing';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -47,9 +46,12 @@ const router = createRouter({
     history: createWebHistory(),
 });
 
+const head = createHead();
+
 createApp(App)
     .use(router)
     .use(VueSocialSharing)
+    .use(head)
     .mount('#app');
 
 </script>
