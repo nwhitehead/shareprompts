@@ -12,16 +12,11 @@ async function handleClick(button) {
     const threadContainer = document.querySelector("main div .flex");
 
     // Figure out model
-    // Start by assuming ChatGPT Plus
-    let model = "ChatGPT Plus";
-    // If we don't see an upgrade button, then look for specific model in link at bottom
-    const upgrade_button = document.querySelector("span.gold-new-button");
-    if (upgrade_button && upgrade_button.innerText.includes("Upgrade")) {
-        model = document.querySelector("main a.underline").innerHTML;
-    }
+    const model = document.querySelector("main div.text-center span a.underline").textContent;
 
-    // Extract title from left panel
-    const title = document.querySelector('a.bg-gray-800 div').textContent;
+    // Extract title from left panel / top titlebar
+    const elem = document.querySelector('a.bg-gray-800 div') || document.querySelector('h1');
+    const title = elem.textContent;
 
     const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
     const conversationData = {
@@ -80,7 +75,7 @@ async function handleClick(button) {
     const jsondata = await response.json();
     // console.log('Conversation data is', jsondata);
     // Go to new tab with fresh convo
-    const url = `https://shareconversation.com/conversation/${jsondata}`;
+    const url = `https://shareconversation.com/conversation/html/${jsondata}`;
     button.textContent = "Share";
     button.style.cursor = "pointer";
     button.disabled = false;
@@ -101,7 +96,7 @@ function addButton() {
     button.addEventListener("click", async function () {
         handleClick(button);
     });
-    const buttonsWrapper = document.querySelector("main form div div");
+    const buttonsWrapper = document.querySelector("main form div");
     buttonsWrapper.appendChild(button);
 }
 

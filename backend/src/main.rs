@@ -8,6 +8,8 @@ use diesel::{prelude::*, r2d2};
 use serde::{Deserialize, Serialize};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use handlebars::{handlebars_helper, Handlebars};
+use chrono::offset::Utc;
+use chrono::DateTime;
 
 // Types related to Postgres connection to database
 type DbConnection = diesel::pg::PgConnection;
@@ -176,6 +178,8 @@ async fn get_conversation_html(
             reg.register_helper("string_equal", Box::new(string_equal));
             let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
             let chatgpt_uri: String = format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
+            let timestamp: DateTime<Utc> = conv.creationdate.into();
+            let timestamp_str: String = format!("{}", timestamp.format("%Y/%m/%d %T UTC"));
             let body = reg.render_template(INDEX_HBS, &serde_json::json!({
                 "style": INDEX_CSS,
                 "title": conv.title,
@@ -183,6 +187,7 @@ async fn get_conversation_html(
                 "avatar": contents.avatar,
                 "chatgpt_uri": chatgpt_uri,
                 "dialog": contents.dialog,
+                "timestamp": timestamp_str,
             })).map_err(error::ErrorInternalServerError)?;
             Ok(HttpResponse::Ok().body(body))
         }

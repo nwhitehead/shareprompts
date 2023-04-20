@@ -27,7 +27,7 @@ function firstLine(conversation) {
 }
 
 function link(id) {
-    return `https://shareconversation.com/conversation/${id}`;
+    return `https://shareconversation.com/conversation/html/${id}`;
 }
 
 async function deleteAction(id) {
