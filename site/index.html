@@ -1,9 +1,20 @@
-<!DOCTYPE html>
 <html>
 <head>
-<title>ShareConversation</title>
+    <title>Share Conversation</title>
 </head>
 <body>
-<h1>Share Conversation</h1>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <div id="app"></div>
+    <script type="module">
+
+import { createApp } from 'vue';
+import App from './src/App.vue';
+import './src/main.css';
+
+createApp(App).mount('#app');
+
+    </script>
+
 </body>
 </html>
