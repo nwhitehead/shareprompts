@@ -3,7 +3,7 @@
 <head>
     <title>ShareConversation - {{ title }}</title>
     <meta property="og:title" content="{{ title }}">
-    <meta property="og:image" content="https://shareconversation/logo-128.png">
+    <meta property="og:image" content="https://shareconversation.com/logo-128.png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/styles/stackoverflow-dark.min.css">
 <style>
 {{{ style }}}
@@ -11,7 +11,7 @@
 <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/highlight.min.js"></script>
 <script>
 function handleClick() {
-    console.log('clicked');
+    window.open('https://shareconversation.com/', '_blank');
 }
 </script>
 </head>
@@ -37,27 +37,29 @@ function handleClick() {
     <div class="flex flex-col text-gray-700">
         {{#each dialog}}
         <div class="group w-full border-b">
-            <div class="container mx-auto gap-x-6 p-4 flex">
-                <div class="w-[30px] flex-none">
+            <div class="container mx-auto md:max-w-3xl">
+                <div class="flex gap-x-6 p-4 whitespace-pre-wrap">
+                    <div class="w-[30px] whitespace-normal flex-none">
+                        {{#if (string_equal "human" this.who)}}
+                            <img src="{{ ../avatar }}" />
+                        {{/if}}
+                        {{#if (string_equal "gpt" this.who)}}
+                            <img src="{{ ../chatgpt_uri }}" />
+                        {{/if}}
+                    </div>
                     {{#if (string_equal "human" this.who)}}
-                        <img src="{{ ../avatar }}" />
+                        <p>{{ this.what }}</p>
                     {{/if}}
                     {{#if (string_equal "gpt" this.who)}}
-                        <img src="{{ ../chatgpt_uri }}" />
+                        {{{ this.what }}}
                     {{/if}}
                 </div>
-                {{#if (string_equal "human" this.who)}}
-                    <p>{{ this.what }}</p>
-                {{/if}}
-                {{#if (string_equal "gpt" this.who)}}
-                    {{{ this.what }}}
-                {{/if}}
             </div>
         </div>
         {{/each}}
     </div>
 
-    <div class="p-4 container mx-auto text-black/50 text-xs">
+    <div class="p-4 container mx-auto text-black/50 text-xs md:max-w-3xl">
         <p>{{ model }}</p>
         <p>This conversation was recorded from <a href="https://chat.openai.com/">https://chat.openai.com/</a> on {{ timestamp }}.</p>
         <p><a href="/">ShareConversation</a> has no affiliation with OpenAI or ChatGPT.</p>
