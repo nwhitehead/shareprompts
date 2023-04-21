@@ -36,7 +36,12 @@ function handleClick() {
 
     <div class="flex flex-col text-gray-700">
         {{#each dialog}}
+            {{#if (string_equal "gpt" this.who)}}
+        <div class="group w-full border-b bg-gray-50">
+            {{/if}}
+            {{#if (string_equal "human" this.who)}}
         <div class="group w-full border-b">
+            {{/if}}
             <div class="container mx-auto md:max-w-3xl">
                 <div class="flex gap-x-6 p-4 whitespace-pre-wrap">
                     <div class="w-[30px] whitespace-normal flex-none">
@@ -86,6 +91,8 @@ function handleClick() {
 
 <div class="p-[60px]">
 </div>
+
+{{!-- <div class="markdown prose w-full break-words dark:prose-invert light bg-black"></div> --}}
 
 </body>
 </html>

@@ -21,6 +21,15 @@ p {
     @apply break-words;
     @apply whitespace-pre-wrap;
 }
+table {
+    @apply mb-4 text-sm;
+}
+.markdown th {
+    @apply bg-stone-200 border py-1 px-3;
+}
+.markdown td {
+    @apply border py-1 px-3;
+}
 code:not(.hljs) {
     font-weight: 700;
 }
@@ -31,4 +40,10 @@ code:not(.hljs)::before {
 code:not(.hljs)::after {
     font-weight: 700;
     content: '`';
+}
+pre code.hljs {
+    @apply p-0;
+}
+.hljs {
+    @apply bg-black;
 }
