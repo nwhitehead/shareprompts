@@ -5,7 +5,7 @@ async function handleClick(button) {
     const config = JSON.parse(msg.config);
     const token = msg.token;
 
-    button.textContent = "Sharing...";
+    button.textContent = "Sharing (copying)...";
     button.style.cursor = "initial";
     button.disabled = true;
 
@@ -41,12 +41,17 @@ async function handleClick(button) {
                 });
             }
         } else if (markdown) {
+            const button = node.querySelector('button.flex.ml-auto.h-full.w-full');
+            button.click();
+            const txt = await navigator.clipboard.readText();
             conversationData.dialog.push({
                 who: "gpt",
-                what: markdown.outerHTML,
+                what: txt,
             });
         }
     }
+    console.log('ConversationData', conversationData);
+
     // console.log('config', config);
     // console.log('conversationData', conversationData);
     // console.log('oauth2 token', token);
