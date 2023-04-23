@@ -42,7 +42,6 @@ code:not(.hljs)::after {
     content: '`';
 }
 pre code.hljs {
-    @apply p-0;
 }
 pre code::before {
     content: '' !important;
@@ -51,5 +50,5 @@ pre code::after {
     content: '' !important;
 }
 .hljs {
-    @apply bg-black;
+    @apply bg-black rounded-b-md p-0;
 }

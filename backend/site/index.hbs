@@ -15,15 +15,15 @@
 <body>
 
 <div class="w-full h-full flex flex-col">
-    <div class="dark sticky top-0 bg-gray-800 items-center">
+    <div class="dark sticky top-0 bg-stone-800 items-center">
         <div class="flex flex-row flex-1">
-            <button onclick="handleClick()" class="text-gray-200 p-2">
+            <button onclick="handleClick()" class="text-stone-200 p-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
             </button>
-            <h1 class="text-gray-200 flex-1 text-center p-2">{{title}}</h1>
-            <button onclick="handleClick()" class="text-gray-200 p-2">
+            <h1 class="text-stone-200 flex-1 text-center p-2">{{title}}</h1>
+            <button onclick="handleClick()" class="text-stone-200 p-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
@@ -31,10 +31,10 @@
         </div>
     </div>
 
-    <div class="flex flex-col text-gray-700">
+    <div class="flex flex-col text-stone-700">
         {{#each dialog}}
             {{#if (string_equal "gpt" this.who)}}
-        <div class="group w-full border-b bg-gray-50">
+        <div class="group w-full border-b bg-stone-50">
             {{/if}}
             {{#if (string_equal "human" this.who)}}
         <div class="group w-full border-b">
@@ -70,7 +70,7 @@
 
 <hr>
 
-<div class="flex flex-row text-2xl text-gray-800 justify-center">
+<div class="flex flex-row text-2xl text-stone-800 justify-center">
 
 <!-- AddToAny BEGIN -->
 <div class="a2a_kit a2a_kit_size_32 a2a_default_style">
