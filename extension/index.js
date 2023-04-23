@@ -127,8 +127,8 @@ function getAvatar() {
         // Get image from page and draw to fresh canvas
         const canvas = document.createElement("canvas");
         const image = document.querySelector("main img.rounded-sm");
-        canvas.width = 32;
-        canvas.height = 32;
+        canvas.width = 48;
+        canvas.height = 48;
         canvas.getContext("2d").drawImage(image, 0, 0);
         // Save as PNG data url
         return canvas.toDataURL("image/png");
