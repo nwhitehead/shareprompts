@@ -23,8 +23,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Templates
 const INDEX_HBS: &str = include_str!("../site/index.hbs");
-const INDEX_CSS: &str = include_str!("../site/dist/index.css");
+const INDEX_CSS: &str = include_str!("../dist/index.css");
 const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
+const MAIN_JS: &str = include_str!("../dist/main.js");
 
 // Check for string equality
 handlebars_helper!(nargs: |*args| args.len());
@@ -188,6 +189,7 @@ async fn get_conversation_html(
                 "chatgpt_uri": chatgpt_uri,
                 "dialog": contents.dialog,
                 "timestamp": timestamp_str,
+                "main_js": MAIN_JS,
             })).map_err(error::ErrorInternalServerError)?;
             Ok(HttpResponse::Ok().body(body))
         }

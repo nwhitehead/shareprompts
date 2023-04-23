@@ -1,8 +1,0 @@
-{
-    "scripts": {
-        "css": "npx tailwindcss -i ./index.css -o ./dist/index.css"
-    },
-    "devDependencies": {
-        "tailwindcss": "^3.3.1"
-    }
-}

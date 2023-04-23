@@ -44,6 +44,12 @@ code:not(.hljs)::after {
 pre code.hljs {
     @apply p-0;
 }
+pre code::before {
+    content: '' !important;
+}
+pre code::after {
+    content: '' !important;
+}
 .hljs {
     @apply bg-black;
 }

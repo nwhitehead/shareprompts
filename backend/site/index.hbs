@@ -8,23 +8,8 @@
 <style>
 {{{ style }}}
 </style>
-<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script type="module">
-
-function handleClick() {
-    window.open('https://shareconversation.com/', '_blank');
-}
-
-window.addEventListener("DOMContentLoaded", (event) => {
-    console.log("DOM fully loaded and parsed");
-    const markdown = document.querySelectorAll('.markdown-source');
-    for (let i = 0; i < markdown.length; i++) {
-        const node = markdown[i];
-        const src = node.innerHTML;
-        node.innerHTML = marked.parse(src);
-    }
-});
+{{{ main_js }}}
 </script>
 </head>
 <body>
