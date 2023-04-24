@@ -27,6 +27,16 @@ const INDEX_CSS: &str = include_str!("../dist/index.css");
 const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
 const MAIN_JS: &str = include_str!("../dist/main.js");
 
+// JWT stuff
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+   iss: String,
+   aud: String,
+   sub: String,
+   nbf: u64,
+   exp: u64,
+}
+
 // Check for string equality
 handlebars_helper!(nargs: |*args| args.len());
 handlebars_helper!(string_equal: |*args| args[0] == args[1]);
@@ -201,13 +211,49 @@ async fn get_conversation_html(
     }
 }
 
+#[derive(Debug)]
+enum TokenError {
+    GenericError
+}
+
+async fn validate_bearer_token(token:String) -> Result<String, TokenError> {
+    Ok("".to_string())
+}
+
 #[get("/conversations")]
 async fn get_my_conversations(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
 ) -> actix_web::Result<impl Responder> {
+    let google_project_id = std::env::var("GOOGLE_PROJECT_ID").expect("GOOGLE_PROJECT_ID should be set");
     let token = auth.token();
     info!("Bearer token was: {}", token);
+    let decoding_key = jsonwebtoken::DecodingKey::from_rsa_components(
+        "zHv3roUMqfv4UbexMfPOA1hmPwAzfXr7Q7jz5hwgamvf8lD0zguxQZ80yCq9rwzIB8oP9w6AHPLbeexm0qhnXDHlO3Xnwt8T8URdrwSoLO9dKBwnXQiv1U6KPKXJUIfwZ0Vt3BPyhSMAZSUqqCA8OMVgxo0O4cgmmA5wAF57EqEOpUo73yEkmUMAUm-pSYoMfv_EfbMRC-sA2dpji6hCEouay45RK2EAXfyCTltVt2WFzZvKvtHaFVaorA3vQTqKBTHQ4-_qXAdiX0Oew3aLWv_Mlk0PCkfZKrGOIaPwyzWPizM52Lw5x_b-oCjJGrSMikD2-x4sHhXBHHIRlTP4JQ",
+        "AQAB",
+    ).map_err(error::ErrorInternalServerError)?;
+    let token_message = jsonwebtoken::decode::<Claims>(&token, &decoding_key, &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256))
+        .map_err(error::ErrorInternalServerError)?;
+    info!("Decoded claims in JWT, uid={}", token_message.claims.sub);
+    let start = std::time::SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs() as u64;
+    info!("Current time since epoch = {}", since_the_epoch);
+    let slop = 2; // Allow a few seconds of wiggle room for clock skew
+    if since_the_epoch + slop < token_message.claims.nbf {
+        info!("Current time is too early for bearer token, nbf={} time={}", token_message.claims.nbf, since_the_epoch);
+        return Ok(HttpResponse::Unauthorized().body("Token authorization failed (nbf)"))
+    }
+    if since_the_epoch > token_message.claims.exp {
+        info!("Current time is too late for bearer token, exp={} time={}", token_message.claims.exp, since_the_epoch);
+        return Ok(HttpResponse::Unauthorized().body("Token authorization failed (exp)"))
+    }
+    if token_message.claims.aud != google_project_id {
+        info!("Google project id does not match token audience, aud={} google_project_id={}", token_message.claims.aud, google_project_id);
+        return Ok(HttpResponse::Unauthorized().body("Token authorization failed (aud)"))
+    }
     let client = awc::Client::new();
     let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?id_token={}", &token);
     let res = client
