@@ -390,6 +390,7 @@ async fn delete_conversation(
 ) -> actix_web::Result<impl Responder> {
     let uid = id.into_inner().0;
     let token = auth.token();
+    info!("Bearer token was: {}", &token);
     let userid = match validate_bearer_identity_token(&token).await {
         Err(_err) => {
             return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))

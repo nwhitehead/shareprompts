@@ -8,36 +8,69 @@ const configuration = reactive({
     research: true,
 });
 
-const conversations = ref(null);
+const token = ref(null);
+const conversations = ref([]);
+const MAXLENGTH = 200;
+const SERVER = 'http://localhost'
 
-function onSignIn(googleUser) {
-  var id_token = googleUser.getAuthResponse().id_token;
-  console.log(`id_token=${id_token}`);
+function dateRepresentation(timestamp) {
+    const d = new Date(timestamp.secs_since_epoch * 1000 + timestamp.nanos_since_epoch / 1000000);
+    return d.toString();
 }
+
+function firstLine(conversation) {
+    const dialog = conversation.contents.dialog;
+    if (dialog.length === 0) return null;
+    const line = dialog[0].what;
+    if (line.length <= MAXLENGTH) return line;
+    return line.substring(0, MAXLENGTH);
+}
+
+function link(id) {
+    return `${SERVER}/conversation/html/${id}`;
+}
+
+async function deleteAction(id) {
+    if (token.value === null) {
+        return;
+    }
+    const addr = `${SERVER}/api/conversation/${id}`;
+    const options = {
+        method: 'DELETE',
+        mode: 'cors',
+        headers: {
+            'authorization': `Bearer ${token.value}`,
+        },
+    };
+    const response = await fetch(addr, options);
+    console.log('Delete response is', response);
+    updateConversationsFromServer();
+}
+
 function handleManage() {
     console.log('Lets do oauth', window);
 }
 
-async function updateConversationsFromServer(token) {
-    const addr = `http://localhost/api/conversations`;
+async function updateConversationsFromServer() {
+    const addr = `${SERVER}/api/conversations`;
     const options = {
         method: 'GET',
         mode: 'cors',
         headers: {
             'content-type': 'application/json',
-            'authorization': `Bearer ${token}`,
+            'authorization': `Bearer ${token.value}`,
         },
     };
-    console.log('Options', options);
     const response = await fetch(addr, options);
     const jsondata = await response.json();
     console.log('Conversation data is', jsondata);
     conversations.value = jsondata;
 }
 
+// Google GIS scripts need the appAuthenticate callback to be in global window scope
 window.appAuthenticate = (arg) => {
-    console.log('Auth callback', arg);
-    updateConversationsFromServer(arg.credential);
+    token.value = arg.credential;
+    updateConversationsFromServer();
 }
 
 </script>
@@ -66,57 +99,35 @@ span.note {
             Share Conversation
         </h1>
 
-<div id="g_id_onload"
-     data-client_id="188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com"
-     data-context="signin"
-     data-ux_mode="popup"
-     data-callback="appAuthenticate"
-     data-auto_select="true"
-     data-itp_support="true">
-</div>
+        <div id="g_id_onload"
+            data-client_id="188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com"
+            data-context="signin"
+            data-ux_mode="popup"
+            data-callback="appAuthenticate"
+            data-auto_select="true"
+            data-itp_support="true">
+        </div>
 
-<div class="g_id_signin"
-     data-type="standard"
-     data-shape="pill"
-     data-theme="outline"
-     data-text="signin_with"
-     data-size="large"
-     data-logo_alignment="left">
-</div>
+        <div class="g_id_signin"
+            data-type="standard"
+            data-shape="pill"
+            data-theme="outline"
+            data-text="signin_with"
+            data-size="large"
+            data-logo_alignment="left">
+        </div>
 
-        <fieldset class="border border-solid border-stone-300 p-3">
-            <legend>Options</legend>
-            <div class="mb-4">
-                <label>
-                    <input type="checkbox" id="avatar" v-model="configuration.avatar" class="mr-2 leading-tight" />
-                    Include actual avatar picture.
-                </label>
-            </div>
-            <div class="mb-4">
-                <label>
-                    <input type="checkbox" id="public" v-model="configuration.public" class="mr-2 leading-tight" />
-                    Include in public index.
-                </label>
-            </div>
-            <div class="">
-                <label>
-                    <input type="checkbox" id="research" v-model="configuration.research" class="mr-2 leading-tight" />
-                    Allow to be used for artificial intelligence research and development.
-                </label>
-            </div>
-        </fieldset>
-
-        <p>
-            <span class="note">Note</span>: Anyone that has the link to a conversation can see it. The "public" option includes the
-            conversation in public lists.
-        </p>
-        <p> <span class="note">Note</span>: Do not include personally identifying information in the conversations you share.
-        </p>
-        <p>
-            <span class="note">Note</span>: You can delete previously shared conversations but this cannot delete
-            any archived copies that others have saved while the conversation was shared.
+        <p v-for="item in conversations">
+            <a :href="link(item.id)">{{ item.id }}</a>
+            - {{ firstLine(item) }}
+            - {{ dateRepresentation(item.creationdate) }}
+            -
+            <button @click="deleteAction(item.id)" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+            </button>
         </p>
 
-        <button @click="handleManage" class="btn-blue">Manage my conversations</button>
     </div>
 </template>
