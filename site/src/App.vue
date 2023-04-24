@@ -1,12 +1,14 @@
 <script setup>
 
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 
 const configuration = reactive({
     avatar: false,
     public: true,
     research: true,
 });
+
+const conversations = ref(null);
 
 function onSignIn(googleUser) {
   var id_token = googleUser.getAuthResponse().id_token;
@@ -16,8 +18,26 @@ function handleManage() {
     console.log('Lets do oauth', window);
 }
 
+async function updateConversationsFromServer(token) {
+    const addr = `https://shareconversation.com/api/conversations`;
+    const options = {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+            'content-type': 'application/json',
+            'authorization': `Bearer ${token}`,
+        },
+    };
+    console.log('Options', options);
+    const response = await fetch(addr, options);
+    const jsondata = await response.json();
+    console.log('Conversation data is', jsondata);
+    conversations.value = jsondata;
+}
+
 window.appAuthenticate = (arg) => {
     console.log('Auth callback', arg);
+    updateConversationsFromServer(arg.credential);
 }
 
 </script>
