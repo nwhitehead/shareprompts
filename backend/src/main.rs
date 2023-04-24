@@ -206,8 +206,10 @@ async fn get_my_conversations(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
 ) -> actix_web::Result<impl Responder> {
+    let token = auth.token();
+    info!("Bearer token was: {}", token);
     let client = awc::Client::new();
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?id_token={}", &token);
     let res = client
         .get(google_validate_url)
         .send()

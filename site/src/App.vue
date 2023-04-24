@@ -19,7 +19,7 @@ function handleManage() {
 }
 
 async function updateConversationsFromServer(token) {
-    const addr = `https://shareconversation.com/api/conversations`;
+    const addr = `http://localhost/api/conversations`;
     const options = {
         method: 'GET',
         mode: 'cors',
