@@ -212,15 +212,17 @@ async fn get_conversation_html(
 
 #[derive(Debug)]
 enum TokenError {
+    Invalid,
     DecodingKeyError,
     DecodeError,
     NotValidBefore,
     Expired,
     AudienceMismatch,
+    Issuer,
 }
 
-/// Validate token and return user_id
-async fn validate_bearer_token(token:String) -> Result<String, TokenError> {
+/// Validate identity token and return user_id
+async fn validate_bearer_identity_token(token:&str) -> Result<String, TokenError> {
     let google_project_id = std::env::var("GOOGLE_PROJECT_ID").expect("GOOGLE_PROJECT_ID should be set");
     let key_n = std::env::var("GOOGLE_PUBLIC_KEY_N").expect("GOOGLE_PUBLIC_KEY_N should be set");
     let key_e = std::env::var("GOOGLE_PUBLIC_KEY_E").expect("GOOGLE_PUBLIC_KEY_E should be set");
@@ -247,7 +249,35 @@ async fn validate_bearer_token(token:String) -> Result<String, TokenError> {
         info!("Google project id does not match token audience, aud={} google_project_id={}", token_message.claims.aud, google_project_id);
         return Err(TokenError::AudienceMismatch)
     }
+    if token_message.claims.iss != "https://accounts.google.com" {
+        info!("Token issuer was not https://accounts.google.com");
+        return Err(TokenError::Issuer)
+    }
     Ok(token_message.claims.sub)
+}
+
+#[derive(Deserialize)]
+struct GoogleTokenCheckResponse
+{
+    user_id: String
+}
+
+/// Validate access token (from extension using chrome.identity.getAuthToken()) and return user_id
+/// Validate identity token and return user_id
+async fn validate_bearer_access_token(token:&str) -> Result<String, TokenError> {
+    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", token);
+    let client = awc::Client::new();
+    let res = client
+        .get(google_validate_url)
+        .send()
+        .await
+        .map_err(|_err| TokenError::Invalid)?
+        .json::<GoogleTokenCheckResponse>()
+        .await;
+    match res {
+        Ok(resok) => Ok(resok.user_id),
+        Err(_) => return Err(TokenError::Invalid),
+    }
 }
 
 #[get("/conversations")]
@@ -257,7 +287,7 @@ async fn get_my_conversations(
 ) -> actix_web::Result<impl Responder> {
     let token = auth.token();
     info!("Bearer token was: {}", &token);
-    let user_id = match validate_bearer_token(token.to_string()).await {
+    let user_id = match validate_bearer_identity_token(&token).await {
         Err(_err) => {
             return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
         },
@@ -307,31 +337,16 @@ impl std::convert::From<DbError> for LocalError {
     }
 }
 
-#[derive(Deserialize)]
-struct GoogleTokenCheckResponse
-{
-    user_id: String
-}
-
 #[post("/conversation/")]
 async fn post_conversation(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
-    let client = awc::Client::new();
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
-    let res = client
-        .get(google_validate_url)
-        .send()
-        .await
-        .map_err(error::ErrorInternalServerError)?
-        .json::<GoogleTokenCheckResponse>()
-        .await;
     let userid =
-        match res {
-            Ok(resok) => resok.user_id,
-            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
+        match validate_bearer_access_token(auth.token()).await {
+            Ok(resok) => resok,
+            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
         };
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
@@ -374,20 +389,13 @@ async fn delete_conversation(
     id: web::Path<(String,)>,
 ) -> actix_web::Result<impl Responder> {
     let uid = id.into_inner().0;
-    let client = awc::Client::new();
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", auth.token());
-    let res = client
-        .get(google_validate_url)
-        .send()
-        .await
-        .map_err(error::ErrorInternalServerError)?
-        .json::<GoogleTokenCheckResponse>()
-        .await;
-    let userid =
-        match res {
-            Ok(resok) => resok.user_id,
-            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
-        };
+    let token = auth.token();
+    let userid = match validate_bearer_identity_token(&token).await {
+        Err(_err) => {
+            return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
+        },
+        Ok(uid) => uid,
+    };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
         let convo = find_conversation_by_id(&mut conn, &uid)?;
@@ -415,7 +423,7 @@ async fn delete_conversation(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Set debug log level by default unless you set things manually from .env file
+    // Set info log level by default unless you set things manually from .env file
     dotenvy::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     // Initialize database pool outside server and copy it in
