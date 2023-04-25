@@ -57,12 +57,11 @@ handlebars_helper!(string_equal: |*args| args[0] == args[1]);
 #[diesel(table_name = conversations)]
 pub struct Conversation {
     pub id: String,
-    pub title: String,
     pub contents: String, // JSON for ConversationContents
-    pub model: String,
+    pub metadata: String, // JSON for ConversationMetadata
     pub public: bool,
     pub research: bool,
-    pub creationdate: std::time::SystemTime,
+    pub deleted: bool,
     pub user_id: String,
 }
 
@@ -76,6 +75,14 @@ pub struct Utterance {
 pub struct ConversationContents {
     pub avatar: String, // data URL of avatar, (may be anonymized)
     pub dialog: Vec<Utterance>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConversationMetadata {
+    pub title: String,
+    pub model: String,
+    pub creationdate: std::time::SystemTime,
+    pub length: usize,
 }
 
 // Information that is required when making a new conversation
@@ -92,12 +99,10 @@ pub struct NewConversation {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConversationInfo {
     pub id: String,
-    pub title: String,
     pub contents: ConversationContents,
+    pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
-    pub model: String,
-    pub creationdate: std::time::SystemTime,
 }
 
 #[derive(Debug)]
@@ -134,10 +139,12 @@ async fn retrieve_key(keys: &JsonWebKeys, id: &str) -> Result<(), JWKSError> {
 fn find_conversation_by_id(
     conn: &mut DbConnection,
     convo_id: &String,
+    deleted_entry: bool,
 ) -> Result<Option<Conversation>, DbError> {
     use self::schema::conversations::dsl::*;
     let results = conversations
         .filter(id.eq(convo_id))
+        .filter(deleted.eq(deleted_entry))
         .limit(1)
         .load::<Conversation>(conn)
         .expect("Error finding conversation");
@@ -146,11 +153,7 @@ fn find_conversation_by_id(
         Ok(None)
     } else {
         let result = results[0].clone();
-        if result.public {
-            Ok(Some(result))
-        } else {
-            Ok(None)
-        }
+        Ok(Some(result))
     }
 }
 
@@ -158,21 +161,21 @@ fn find_conversation_by_id(
 fn find_conversations_by_user(
     conn: &mut DbConnection,
     uid: &String,
+    deleted_entry: bool,
 ) -> Result<Vec<ConversationInfo>, DbError> {
     use self::schema::conversations::dsl::*;
     conversations
         .filter(user_id.eq(uid))
+        .filter(deleted.eq(deleted_entry))
         .load::<Conversation>(conn)
         .expect("Error finding conversation")
         .iter()
         .map(|conv| Ok(ConversationInfo {
             id: conv.id.clone(),
-            title: conv.title.clone(),
             contents: serde_json::from_str(&conv.contents)?,
+            metadata: serde_json::from_str(&conv.metadata)?,
             public: conv.public,
             research: conv.research,
-            model: conv.model.clone(),
-            creationdate: conv.creationdate,
         }))
         .collect()
 }
@@ -186,7 +189,7 @@ async fn get_conversation_json(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversation_by_id(&mut conn, &uid)
+        find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -194,12 +197,10 @@ async fn get_conversation_json(
         Some(conv) => {
             let conversation_info = ConversationInfo {
                 id: conv.id.clone(),
-                title: conv.title.clone(),
                 contents: serde_json::from_str(&conv.contents)?,
+                metadata: serde_json::from_str(&conv.metadata)?,
                 public: conv.public,
                 research: conv.research,
-                model: conv.model,
-                creationdate: conv.creationdate,
             };
             Ok(HttpResponse::Ok().json(conversation_info))
         }
@@ -220,7 +221,7 @@ async fn get_conversation_html(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversation_by_id(&mut conn, &uid)
+        find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -229,13 +230,14 @@ async fn get_conversation_html(
             let mut reg = Handlebars::new();
             reg.register_helper("string_equal", Box::new(string_equal));
             let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
+            let metadata: ConversationMetadata = serde_json::from_str(&conv.metadata)?;
             let chatgpt_uri: String = format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
-            let timestamp: DateTime<Utc> = conv.creationdate.into();
+            let timestamp: DateTime<Utc> = metadata.creationdate.into();
             let timestamp_str: String = format!("{}", timestamp.format("%Y/%m/%d %T UTC"));
             let body = reg.render_template(INDEX_HBS, &serde_json::json!({
                 "style": INDEX_CSS,
-                "title": conv.title,
-                "model": conv.model,
+                "title": metadata.title,
+                "model": metadata.model,
                 "avatar": contents.avatar,
                 "chatgpt_uri": chatgpt_uri,
                 "dialog": contents.dialog,
@@ -338,7 +340,7 @@ async fn get_my_conversations(
     // Don't block server thread, db stuff is synchronous
     let conversations = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversations_by_user(&mut conn, &user_id)
+        find_conversations_by_user(&mut conn, &user_id, /*deleted=*/false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -392,17 +394,23 @@ async fn post_conversation(
         };
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
+        let meta_data = ConversationMetadata {
+            title: form.title.clone(),
+            model: form.model.clone(),
+            creationdate: chrono::Utc::now().into(),
+            length: form.contents.dialog.len(),
+        };
+        let json_metadata = serde_json::to_string(&meta_data)?;
         let mut conn = pool.get()?;
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
             id: new_uuid.clone(),
-            title: form.title.clone(),
             contents: json_contents,
-            model: form.model.clone(),
+            metadata: json_metadata,
             public: form.public,
             research: form.research,
-            creationdate: chrono::Utc::now().into(),
             user_id: userid,
+            deleted: false,
         };
         use self::schema::conversations::dsl::*;
         diesel::insert_into(conversations)
@@ -441,14 +449,15 @@ async fn delete_conversation(
     };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
-        let convo = find_conversation_by_id(&mut conn, &uid)?;
+        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/true)?;
         match convo {
             Some(conv) => {
                 use self::schema::conversations::dsl::*;
                 if conv.user_id != userid {
                     Err(LocalError::AuthorizationProblem)
                 } else {
-                    diesel::delete(conversations.filter(id.eq(uid)))
+                    diesel::update(conversations.filter(id.eq(uid)))
+                        .set(deleted.eq(true))
                         .execute(& mut conn)
                         .expect("Error deleting conversation");
                     Ok(())

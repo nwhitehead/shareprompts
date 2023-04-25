@@ -3,12 +3,11 @@
 diesel::table! {
     conversations (id) {
         id -> Text,
-        title -> Varchar,
         contents -> Text,
-        model -> Text,
+        metadata -> Text,
         public -> Bool,
         research -> Bool,
-        creationdate -> Timestamp,
+        deleted -> Bool,
         user_id -> Text,
     }
 }
