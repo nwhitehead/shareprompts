@@ -27,6 +27,18 @@ const INDEX_CSS: &str = include_str!("../dist/index.css");
 const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
 const MAIN_JS: &str = include_str!("../dist/main.js");
 
+// Google keys
+struct JsonWebKey {
+    r#use: String,
+    kid: String,
+    alg: String,
+    n: String,
+    e: String,
+    exp: u64,
+}
+
+type JsonWebKeys = std::collections::HashMap<String, JsonWebKey>;
+
 // JWT stuff
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -86,6 +98,36 @@ pub struct ConversationInfo {
     pub research: bool,
     pub model: String,
     pub creationdate: std::time::SystemTime,
+}
+
+#[derive(Debug)]
+enum JWKSError {
+    Retrieval,
+}
+
+// Refresh our collection of Google public keys
+// Find correct one to use
+async fn retrieve_key(keys: &JsonWebKeys, id: &str) -> Result<(), JWKSError> {
+    if keys.len() == 0 {
+        info!("Refreshing public keys");
+        let google_keys_url = "https://www.googleapis.com/oauth2/v3/certs";
+        let client = awc::Client::new();
+        let res = client
+            .get(google_keys_url)
+            .send()
+            .await
+            .ok().expect("Google needs to be accessible")
+            .json::<serde_json::Value>()
+            .await;
+        match res {
+            Ok(payload) => {
+                info!("Got payload {}", payload.to_string());
+                return Ok(())
+            },
+            Err(_) => return Err(JWKSError::Retrieval)
+        }
+    }
+    Ok(())
 }
 
 // Look in DB for specific ID an return DB Conversation if found
@@ -442,6 +484,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(JsonWebKeys::new()))
             .service(get_conversation_json)
             .service(get_conversation_html)
             .service(post_conversation)
