@@ -29,6 +29,7 @@ const INDEX_HBS: &str = include_str!("../site/index.hbs");
 const INDEX_CSS: &str = include_str!("../dist/index.css");
 const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
 const MAIN_JS: &str = include_str!("../dist/main.js");
+const EXPIRATION_SECONDS: u64 = 60 * 60 * 5;
 
 // Google keys
 #[derive(Debug, Deserialize)]
@@ -137,15 +138,30 @@ enum JWKSError {
     NotFound,
 }
 
+fn get_epoch_time() -> u64 {
+    let start = std::time::SystemTime::now();
+    start
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("Time went backwards from UNIX_EPOCH")
+        .as_secs() as u64
+}
+
 // Refresh our collection of Google public keys
 // Find correct one to use
 async fn retrieve_key(
     jwks: &mut JsonWebKeysSet,
     id: &str,
 ) -> Result<jsonwebtoken::DecodingKey, JWKSError> {
-    let should_retrieve = jwks.keys.len() == 0 || true;
+    let now = get_epoch_time();
+    info!(
+        "Checking for expiration, len={} now={} exp={}",
+        jwks.keys.len(),
+        now,
+        jwks.exp
+    );
+    let should_retrieve = jwks.keys.len() == 0 || now >= jwks.exp;
     if should_retrieve {
-        info!("Refreshing public keys");
+        info!("Refreshing Google public keys");
         let google_keys_url = "https://www.googleapis.com/oauth2/v3/certs";
         let client = awc::Client::new();
         let res = client
@@ -163,6 +179,8 @@ async fn retrieve_key(
                     jwks.keys.insert(key.kid.clone(), key);
                 }
                 info!("New hashmap has size {}", jwks.keys.len());
+                jwks.exp = now + EXPIRATION_SECONDS;
+                info!("New expiration of public keys {}", jwks.exp);
             }
             Err(_) => return Err(JWKSError::Retrieval),
         }
@@ -338,11 +356,7 @@ async fn validate_bearer_identity_token(
         "Decoded claims in JWT, user_id={}",
         token_message.claims.sub
     );
-    let start = std::time::SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("Time went backwards from UNIX_EPOCH")
-        .as_secs() as u64;
+    let since_the_epoch = get_epoch_time();
     let slop = 2; // Allow a few seconds of wiggle room for clock skew
     if since_the_epoch + slop < token_message.claims.nbf {
         info!(
@@ -568,16 +582,18 @@ async fn main() -> std::io::Result<()> {
             .expect("could not run pending migrations");
     }
 
+    let state = web::Data::new(AppState {
+        jwks: std::sync::Mutex::new(JsonWebKeysSet {
+            keys: std::collections::HashMap::new(),
+            exp: 0,
+        }),
+    });
+
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(AppState {
-                jwks: std::sync::Mutex::new(JsonWebKeysSet {
-                    keys: std::collections::HashMap::new(),
-                    exp: 0,
-                }),
-            }))
+            .app_data(state.clone())
             .service(get_conversation_json)
             .service(get_conversation_html)
             .service(post_conversation)
