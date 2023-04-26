@@ -2,14 +2,17 @@ extern crate diesel;
 
 mod schema;
 
-use log::{info};
-use actix_web::{delete, error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
-use diesel::{prelude::*, r2d2};
-use serde::{Deserialize, Serialize};
+use actix_web::{
+    delete, error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder,
+};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use handlebars::{handlebars_helper, Handlebars};
 use chrono::offset::Utc;
 use chrono::DateTime;
+use diesel::{prelude::*, r2d2};
+use handlebars::{handlebars_helper, Handlebars};
+use log::info;
+use serde::{Deserialize, Serialize};
+use std::vec::Vec;
 
 // Types related to Postgres connection to database
 type DbConnection = diesel::pg::PgConnection;
@@ -17,8 +20,8 @@ type DbConnectionManager = diesel::r2d2::ConnectionManager<DbConnection>;
 type DbPool = diesel::r2d2::Pool<DbConnectionManager>;
 type DbError = Box<dyn std::error::Error + Send + Sync>;
 
-use schema::conversations;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use schema::conversations;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Templates
@@ -28,25 +31,38 @@ const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
 const MAIN_JS: &str = include_str!("../dist/main.js");
 
 // Google keys
+#[derive(Debug, Deserialize)]
 struct JsonWebKey {
     r#use: String,
     kid: String,
     alg: String,
     n: String,
     e: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct JsonWebKeySetResponse {
+    keys: Vec<JsonWebKey>,
+}
+
+struct JsonWebKeysSet {
+    keys: std::collections::HashMap<String, JsonWebKey>,
     exp: u64,
 }
 
-type JsonWebKeys = std::collections::HashMap<String, JsonWebKey>;
+// Main AppData
+struct AppState {
+    jwks: std::sync::Mutex<JsonWebKeysSet>,
+}
 
 // JWT stuff
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
-   iss: String,
-   aud: String,
-   sub: String,
-   nbf: u64,
-   exp: u64,
+    iss: String,
+    aud: String,
+    sub: String,
+    nbf: u64,
+    exp: u64,
 }
 
 // Check for string equality
@@ -117,12 +133,18 @@ pub struct ShortConversationInfo {
 #[derive(Debug)]
 enum JWKSError {
     Retrieval,
+    DecodingKeyError,
+    NotFound,
 }
 
 // Refresh our collection of Google public keys
 // Find correct one to use
-async fn retrieve_key(keys: &JsonWebKeys, id: &str) -> Result<(), JWKSError> {
-    if keys.len() == 0 {
+async fn retrieve_key(
+    jwks: &mut JsonWebKeysSet,
+    id: &str,
+) -> Result<jsonwebtoken::DecodingKey, JWKSError> {
+    let should_retrieve = jwks.keys.len() == 0 || true;
+    if should_retrieve {
         info!("Refreshing public keys");
         let google_keys_url = "https://www.googleapis.com/oauth2/v3/certs";
         let client = awc::Client::new();
@@ -130,18 +152,31 @@ async fn retrieve_key(keys: &JsonWebKeys, id: &str) -> Result<(), JWKSError> {
             .get(google_keys_url)
             .send()
             .await
-            .ok().expect("Google needs to be accessible")
-            .json::<serde_json::Value>()
+            .ok()
+            .expect("Google needs to be accessible")
+            .json::<JsonWebKeySetResponse>()
             .await;
         match res {
             Ok(payload) => {
-                info!("Got payload {}", payload.to_string());
-                return Ok(())
-            },
-            Err(_) => return Err(JWKSError::Retrieval)
+                info!("Got payload {}", payload.keys.len());
+                for key in payload.keys {
+                    jwks.keys.insert(key.kid.clone(), key);
+                }
+                info!("New hashmap has size {}", jwks.keys.len());
+            }
+            Err(_) => return Err(JWKSError::Retrieval),
         }
     }
-    Ok(())
+    // Now get the needed key from the hashmap
+    let key = match jwks.keys.get(id) {
+        Some(k) => k,
+        None => {
+            return Err(JWKSError::NotFound);
+        }
+    };
+    let decoding_key = jsonwebtoken::DecodingKey::from_rsa_components(&key.n, &key.e)
+        .map_err(|_err| JWKSError::DecodingKeyError)?;
+    return Ok(decoding_key);
 }
 
 // Look in DB for specific ID an return DB Conversation if found
@@ -179,12 +214,14 @@ fn find_conversations_by_user(
         .load::<Conversation>(conn)
         .expect("Error finding conversation")
         .iter()
-        .map(|conv| Ok(ShortConversationInfo {
-            id: conv.id.clone(),
-            metadata: serde_json::from_str(&conv.metadata)?,
-            public: conv.public,
-            research: conv.research,
-        }))
+        .map(|conv| {
+            Ok(ShortConversationInfo {
+                id: conv.id.clone(),
+                metadata: serde_json::from_str(&conv.metadata)?,
+                public: conv.public,
+                research: conv.research,
+            })
+        })
         .collect()
 }
 
@@ -197,7 +234,7 @@ async fn get_conversation_json(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)
+        find_conversation_by_id(&mut conn, &uid, /*deleted=*/ false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -212,11 +249,7 @@ async fn get_conversation_json(
             };
             Ok(HttpResponse::Ok().json(conversation_info))
         }
-        None => {
-            Ok(HttpResponse::NotFound().body(format!(
-                "Not found"
-            )))
-        }
+        None => Ok(HttpResponse::NotFound().body(format!("Not found"))),
     }
 }
 
@@ -229,7 +262,7 @@ async fn get_conversation_html(
     // Don't block server thread, db stuff is synchronous
     let conversation = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)
+        find_conversation_by_id(&mut conn, &uid, /*deleted=*/ false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -239,30 +272,31 @@ async fn get_conversation_html(
             reg.register_helper("string_equal", Box::new(string_equal));
             let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
             let metadata: ConversationMetadata = serde_json::from_str(&conv.metadata)?;
-            let chatgpt_uri: String = format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
+            let chatgpt_uri: String =
+                format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
             let timestamp: DateTime<Utc> = metadata.creationdate.into();
             let timestamp_str: String = format!("{}", timestamp.format("%Y/%m/%d %T UTC"));
-            let body = reg.render_template(INDEX_HBS, &serde_json::json!({
-                "style": INDEX_CSS,
-                "title": metadata.title,
-                "model": metadata.model,
-                "avatar": contents.avatar,
-                "chatgpt_uri": chatgpt_uri,
-                "dialog": contents.dialog,
-                "timestamp": timestamp_str,
-                "main_js": MAIN_JS,
-            })).map_err(error::ErrorInternalServerError)?;
+            let body = reg
+                .render_template(
+                    INDEX_HBS,
+                    &serde_json::json!({
+                        "style": INDEX_CSS,
+                        "title": metadata.title,
+                        "model": metadata.model,
+                        "avatar": contents.avatar,
+                        "chatgpt_uri": chatgpt_uri,
+                        "dialog": contents.dialog,
+                        "timestamp": timestamp_str,
+                        "main_js": MAIN_JS,
+                    }),
+                )
+                .map_err(error::ErrorInternalServerError)?;
             Ok(HttpResponse::Ok().body(body))
         }
-        None => {
-            Ok(HttpResponse::NotFound().body(format!(
-                "Not found"
-            )))
-        }
+        None => Ok(HttpResponse::NotFound().body(format!("Not found"))),
     }
 }
 
-#[derive(Debug)]
 enum TokenError {
     Invalid,
     DecodingKeyError,
@@ -271,18 +305,39 @@ enum TokenError {
     Expired,
     AudienceMismatch,
     Issuer,
+    JWKSProblem,
+}
+
+// Extract needed key id from token without validating anything
+fn get_kid(token: &str) -> Result<String, TokenError> {
+    let header = jsonwebtoken::decode_header(&token).map_err(|_err| TokenError::Invalid)?;
+    match header.kid {
+        Some(key_id) => Ok(key_id),
+        None => Err(TokenError::Invalid),
+    }
 }
 
 /// Validate identity token and return user_id
-async fn validate_bearer_identity_token(token:&str) -> Result<String, TokenError> {
-    let google_project_id = std::env::var("GOOGLE_PROJECT_ID").expect("GOOGLE_PROJECT_ID should be set");
-    let key_n = std::env::var("GOOGLE_PUBLIC_KEY_N").expect("GOOGLE_PUBLIC_KEY_N should be set");
-    let key_e = std::env::var("GOOGLE_PUBLIC_KEY_E").expect("GOOGLE_PUBLIC_KEY_E should be set");
-    info!("GOOGLE_PROJECT_ID = {}", google_project_id);
-    let decoding_key = jsonwebtoken::DecodingKey::from_rsa_components(&key_n, &key_e).map_err(|_err| TokenError::DecodingKeyError)?;
-    let token_message = jsonwebtoken::decode::<Claims>(&token, &decoding_key, &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256))
-        .map_err(|_err| TokenError::DecodeError)?;
-    info!("Decoded claims in JWT, user_id={}", token_message.claims.sub);
+async fn validate_bearer_identity_token(
+    jwks: &mut JsonWebKeysSet,
+    token: &str,
+) -> Result<String, TokenError> {
+    let google_project_id =
+        std::env::var("GOOGLE_PROJECT_ID").expect("GOOGLE_PROJECT_ID should be set");
+    let kid = get_kid(&token)?;
+    let decoding_key = retrieve_key(jwks, &kid)
+        .await
+        .map_err(|_err| TokenError::JWKSProblem)?;
+    let token_message = jsonwebtoken::decode::<Claims>(
+        &token,
+        &decoding_key,
+        &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256),
+    )
+    .map_err(|_err| TokenError::DecodeError)?;
+    info!(
+        "Decoded claims in JWT, user_id={}",
+        token_message.claims.sub
+    );
     let start = std::time::SystemTime::now();
     let since_the_epoch = start
         .duration_since(std::time::UNIX_EPOCH)
@@ -290,34 +345,45 @@ async fn validate_bearer_identity_token(token:&str) -> Result<String, TokenError
         .as_secs() as u64;
     let slop = 2; // Allow a few seconds of wiggle room for clock skew
     if since_the_epoch + slop < token_message.claims.nbf {
-        info!("Current time is too early for bearer token, nbf={} time={}", token_message.claims.nbf, since_the_epoch);
-        return Err(TokenError::NotValidBefore)
+        info!(
+            "Current time is too early for bearer token, nbf={} time={}",
+            token_message.claims.nbf, since_the_epoch
+        );
+        return Err(TokenError::NotValidBefore);
     }
     if since_the_epoch > token_message.claims.exp {
-        info!("Current time is too late for bearer token, exp={} time={}", token_message.claims.exp, since_the_epoch);
-        return Err(TokenError::Expired)
+        info!(
+            "Current time is too late for bearer token, exp={} time={}",
+            token_message.claims.exp, since_the_epoch
+        );
+        return Err(TokenError::Expired);
     }
     if token_message.claims.aud != google_project_id {
-        info!("Google project id does not match token audience, aud={} google_project_id={}", token_message.claims.aud, google_project_id);
-        return Err(TokenError::AudienceMismatch)
+        info!(
+            "Google project id does not match token audience, aud={} google_project_id={}",
+            token_message.claims.aud, google_project_id
+        );
+        return Err(TokenError::AudienceMismatch);
     }
     if token_message.claims.iss != "https://accounts.google.com" {
         info!("Token issuer was not https://accounts.google.com");
-        return Err(TokenError::Issuer)
+        return Err(TokenError::Issuer);
     }
     Ok(token_message.claims.sub)
 }
 
 #[derive(Deserialize)]
-struct GoogleTokenCheckResponse
-{
-    user_id: String
+struct GoogleTokenCheckResponse {
+    user_id: String,
 }
 
 /// Validate access token (from extension using chrome.identity.getAuthToken()) and return user_id
-/// Validate identity token and return user_id
-async fn validate_bearer_access_token(token:&str) -> Result<String, TokenError> {
-    let google_validate_url = format!("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}", token);
+/// Validate token and return user_id
+async fn validate_bearer_access_token(token: &str) -> Result<String, TokenError> {
+    let google_validate_url = format!(
+        "https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={}",
+        token
+    );
     let client = awc::Client::new();
     let res = client
         .get(google_validate_url)
@@ -336,19 +402,19 @@ async fn validate_bearer_access_token(token:&str) -> Result<String, TokenError> 
 async fn get_my_conversations(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
+    state: web::Data<AppState>,
 ) -> actix_web::Result<impl Responder> {
     let token = auth.token();
     info!("Bearer token was: {}", &token);
-    let user_id = match validate_bearer_identity_token(&token).await {
-        Err(_err) => {
-            return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
-        },
+    let mut jwks = state.jwks.lock().unwrap(); //map_err(error::ErrorInternalServerError)?;
+    let user_id = match validate_bearer_identity_token(&mut jwks, &token).await {
+        Err(_err) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
         Ok(uid) => uid,
     };
     // Don't block server thread, db stuff is synchronous
     let conversations = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversations_by_user(&mut conn, &user_id, /*deleted=*/false)
+        find_conversations_by_user(&mut conn, &user_id, /*deleted=*/ false)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -395,11 +461,10 @@ async fn post_conversation(
     pool: web::Data<DbPool>,
     form: web::Json<NewConversation>,
 ) -> actix_web::Result<impl Responder> {
-    let userid =
-        match validate_bearer_access_token(auth.token()).await {
-            Ok(resok) => resok,
-            Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
-        };
+    let userid = match validate_bearer_access_token(auth.token()).await {
+        Ok(resok) => resok,
+        Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
+    };
     let convo_id = web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
         let meta_data = ConversationMetadata {
@@ -423,7 +488,7 @@ async fn post_conversation(
         use self::schema::conversations::dsl::*;
         diesel::insert_into(conversations)
             .values(nc)
-            .execute(& mut conn)
+            .execute(&mut conn)
             .expect("Error saving new conversation");
         Ok(new_uuid)
     })
@@ -444,20 +509,20 @@ fn initialize_db_pool() -> DbPool {
 async fn delete_conversation(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
+    state: web::Data<AppState>,
     id: web::Path<(String,)>,
 ) -> actix_web::Result<impl Responder> {
     let uid = id.into_inner().0;
     let token = auth.token();
+    let mut jwks = state.jwks.lock().unwrap();
     info!("Bearer token was: {}", &token);
-    let userid = match validate_bearer_identity_token(&token).await {
-        Err(_err) => {
-            return Ok(HttpResponse::Unauthorized().body("Token authorization failed"))
-        },
+    let userid = match validate_bearer_identity_token(&mut jwks, &token).await {
+        Err(_err) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
         Ok(uid) => uid,
     };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
-        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)?;
+        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/ false)?;
         match convo {
             Some(conv) => {
                 use self::schema::conversations::dsl::*;
@@ -467,7 +532,7 @@ async fn delete_conversation(
                 } else {
                     diesel::update(conversations.filter(id.eq(uid)))
                         .set(deleted.eq(true))
-                        .execute(& mut conn)
+                        .execute(&mut conn)
                         .expect("Error deleting conversation");
                     Ok(())
                 }
@@ -493,17 +558,26 @@ async fn main() -> std::io::Result<()> {
     let mut conn = pool.get().expect("db pool could not produce a connection");
     // Check for pending migrations
     info!("Checking for pending database migrations (stored internally to binary)");
-    let cnt = conn.pending_migrations(MIGRATIONS).expect("could not get list of migrations").len();
+    let cnt = conn
+        .pending_migrations(MIGRATIONS)
+        .expect("could not get list of migrations")
+        .len();
     if cnt > 0 {
         info!("Applying {} pending migrations", cnt);
-        conn.run_pending_migrations(MIGRATIONS).expect("could not run pending migrations");
+        conn.run_pending_migrations(MIGRATIONS)
+            .expect("could not run pending migrations");
     }
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(JsonWebKeys::new()))
+            .app_data(web::Data::new(AppState {
+                jwks: std::sync::Mutex::new(JsonWebKeysSet {
+                    keys: std::collections::HashMap::new(),
+                    exp: 0,
+                }),
+            }))
             .service(get_conversation_json)
             .service(get_conversation_html)
             .service(post_conversation)
