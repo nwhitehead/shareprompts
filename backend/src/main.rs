@@ -2,8 +2,10 @@ extern crate diesel;
 
 mod schema;
 
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{
-    delete, error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder,
+    cookie::Key, delete, error, get, middleware, post, web, App, Error, HttpResponse, HttpServer,
+    Responder,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::offset::Utc;
@@ -581,7 +583,12 @@ async fn main() -> std::io::Result<()> {
         conn.run_pending_migrations(MIGRATIONS)
             .expect("could not run pending migrations");
     }
+    // Setup cookie secret key
+    info!("Generating cookie secret key");
+    let secret = std::env::var("SECRET").expect("SECRET should be set");
+    let secret_key = Key::from(secret.as_bytes());
 
+    let sessions = SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone());
     let state = web::Data::new(AppState {
         jwks: std::sync::Mutex::new(JsonWebKeysSet {
             keys: std::collections::HashMap::new(),
