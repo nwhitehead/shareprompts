@@ -105,6 +105,15 @@ pub struct ConversationInfo {
     pub research: bool,
 }
 
+// Information returned from GET for list of conversations
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShortConversationInfo {
+    pub id: String,
+    pub metadata: ConversationMetadata,
+    pub public: bool,
+    pub research: bool,
+}
+
 #[derive(Debug)]
 enum JWKSError {
     Retrieval,
@@ -157,12 +166,12 @@ fn find_conversation_by_id(
     }
 }
 
-// Look in DB for specific ID an return DB Conversation if found
+// Look in DB for all conversations of a user
 fn find_conversations_by_user(
     conn: &mut DbConnection,
     uid: &String,
     deleted_entry: bool,
-) -> Result<Vec<ConversationInfo>, DbError> {
+) -> Result<Vec<ShortConversationInfo>, DbError> {
     use self::schema::conversations::dsl::*;
     conversations
         .filter(user_id.eq(uid))
@@ -170,9 +179,8 @@ fn find_conversations_by_user(
         .load::<Conversation>(conn)
         .expect("Error finding conversation")
         .iter()
-        .map(|conv| Ok(ConversationInfo {
+        .map(|conv| Ok(ShortConversationInfo {
             id: conv.id.clone(),
-            contents: serde_json::from_str(&conv.contents)?,
             metadata: serde_json::from_str(&conv.metadata)?,
             public: conv.public,
             research: conv.research,
@@ -449,11 +457,12 @@ async fn delete_conversation(
     };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
-        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/true)?;
+        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/false)?;
         match convo {
             Some(conv) => {
                 use self::schema::conversations::dsl::*;
                 if conv.user_id != userid {
+                    info!("Converation to delete owner does not match requestor");
                     Err(LocalError::AuthorizationProblem)
                 } else {
                     diesel::update(conversations.filter(id.eq(uid)))
@@ -464,6 +473,7 @@ async fn delete_conversation(
                 }
             }
             _ => {
+                info!("Converation to delete not found");
                 Err(LocalError::AuthorizationProblem)
             }
         }

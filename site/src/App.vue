@@ -11,7 +11,7 @@ const configuration = reactive({
 const token = ref(null);
 const conversations = ref([]);
 const MAXLENGTH = 200;
-const SERVER = 'http://localhost'
+const SERVER = 'http://localhost';
 
 function dateRepresentation(timestamp) {
     const d = new Date(timestamp.secs_since_epoch * 1000 + timestamp.nanos_since_epoch / 1000000);
@@ -45,10 +45,6 @@ async function deleteAction(id) {
     const response = await fetch(addr, options);
     console.log('Delete response is', response);
     updateConversationsFromServer();
-}
-
-function handleManage() {
-    console.log('Lets do oauth', window);
 }
 
 async function updateConversationsFromServer() {
@@ -119,8 +115,8 @@ span.note {
 
         <p v-for="item in conversations">
             <a :href="link(item.id)">{{ item.id }}</a>
-            - {{ firstLine(item) }}
-            - {{ dateRepresentation(item.creationdate) }}
+            - {{ item.metadata.title }}
+            - {{ dateRepresentation(item.metadata.creationdate) }}
             -
             <button @click="deleteAction(item.id)" class="btn">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
