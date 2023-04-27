@@ -433,6 +433,16 @@ async fn authenticated(
     Ok(HttpResponse::Unauthorized().body("Not authenticated"))
 }
 
+/// Log out user
+#[post("/logout")]
+async fn logout(
+    state: web::Data<AppState>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    session.purge();
+    Ok(HttpResponse::Ok().body("Logged out"))
+}
+
 /// Authenticate user
 // Client provides Google identity token (from GIS button thingy)
 // Sends that token as "authorization: Bearer ..."
@@ -662,6 +672,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_my_conversations)
             .service(authenticate)
             .service(authenticated)
+            .service(logout)
     })
     .bind("0.0.0.0:9090")?
     .run()

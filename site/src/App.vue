@@ -130,6 +130,25 @@ async function updateConversationsFromServer() {
     conversations.value = jsondata;
 }
 
+async function logout() {
+    const addr = `${SERVER}/api/logout`;
+    const options = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+        },
+    };
+    const response = await fetch(addr, options);
+    return await response.ok;
+}
+
+async function handleLogout() {
+    console.log("Logout");
+    const res = await logout();
+    console.log('Logged out', res);
+}
+
 // Google GIS scripts need the appAuthenticate callback to be in global window scope
 window.appAuthenticate = (arg) => {
     token.value = arg.credential;
@@ -164,6 +183,8 @@ span.note {
         
         <div id="googleButton">
         </div>
+
+        <button @click="handleLogout">Logout</button>
 
         <p v-for="item in conversations">
             <a :href="link(item.id)">{{ item.id }}</a>
