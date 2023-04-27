@@ -472,9 +472,8 @@ async fn authenticate(
     Ok(HttpResponse::Ok().body("Authenticated"))
 }
 
-#[get("/conversations")]
+#[post("/conversations")]
 async fn get_my_conversations(
-    auth: BearerAuth,
     pool: web::Data<DbPool>,
     state: web::Data<AppState>,
     session: Session,

@@ -9,36 +9,32 @@ const configuration = reactive({
 });
 
 const authenticated = ref(null);
-const needAuthentication = ref(false);
-const token = ref(null);
 const conversations = ref([]);
 const MAXLENGTH = 200;
 
 const SERVER = (import.meta.env.MODE === 'development') ? 'http://localhost' : location.origin;
+const GOOGLE_PROJECT_ID = "188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com";
 
 onMounted(async () => {
     google.accounts.id.initialize({
-        client_id: "188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com",
+        client_id: GOOGLE_PROJECT_ID,
         callback: async (response) => {
-            console.log("Encoded JWT ID token: " + response.credential);
             const resp = await authenticateWithServer(response.credential);
-            console.log(`Got response ${resp}`);
             authenticated.value = await checkIfAuthenticated();
-            console.log(`Authenticated=${authenticated.value}`);
+            if (authenticated.value) {
+                updateConversationsFromServer();
+            }
         },
     });
-    console.log("Let's check if we need to show Google signin button");
-    console.log(import.meta.env.MODE);
     authenticated.value = await checkIfAuthenticated();
-    console.log(`Authenticated=${authenticated.value}`);
-    if (!authenticated.value) {
-        needAuthentication.value = true;
+    if (authenticated.value) {
+        updateConversationsFromServer();
     }
 });
 
-watch(needAuthentication, (value) => {
+watch(authenticated, (value) => {
     // If value turned to true, render the Google button directly
-    if (value) {
+    if (!value) {
         google.accounts.id.renderButton(
             document.getElementById("googleButton"),
             {
@@ -67,7 +63,7 @@ function link(id) {
 }
 
 async function deleteAction(id) {
-    if (token.value === null) {
+    if (!authenticated.value) {
         return;
     }
     const addr = `${SERVER}/api/conversation/${id}`;
@@ -116,12 +112,10 @@ async function authenticateWithServer(token) {
 async function updateConversationsFromServer() {
     const addr = `${SERVER}/api/conversations`;
     const options = {
-        method: 'GET',
-        mode: 'cors',
+        method: 'POST',
         headers: {
             'content-type': 'application/json',
             'credentials': 'include',
-            'authorization': `Bearer ${token.value}`,
         },
     };
     const response = await fetch(addr, options);
@@ -144,9 +138,10 @@ async function logout() {
 }
 
 async function handleLogout() {
-    console.log("Logout");
     const res = await logout();
-    console.log('Logged out', res);
+    if (res) {
+        authenticated.value = false;
+    }
 }
 
 // Google GIS scripts need the appAuthenticate callback to be in global window scope
@@ -180,11 +175,13 @@ span.note {
         <h1 className="text-2xl font-bold">
             Share Conversation
         </h1>
+
+        <p>Authenticated: {{ authenticated }}</p>
         
-        <div id="googleButton">
+        <div v-show="!authenticated" id="googleButton">
         </div>
 
-        <button @click="handleLogout">Logout</button>
+        <button v-show="authenticated" @click="handleLogout">Logout</button>
 
         <p v-for="item in conversations">
             <a :href="link(item.id)">{{ item.id }}</a>
