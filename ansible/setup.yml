@@ -85,7 +85,7 @@
         state: enabled
     - name: Setup Nginx appserver site
       template:
-        src: ../site.conf
+        src: ../site.conf.j2
         dest: /etc/nginx/sites-available/shareprompts
       notify: Restart Nginx
     - name: Enable Nginx site

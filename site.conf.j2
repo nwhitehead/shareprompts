@@ -4,7 +4,9 @@ server {
     listen 80;
     listen [::]:80;
 
-    server_name shareconversation.com www.shareconversation.com localhost;
+    {% if ansible_connection != 'local' %}
+    server_name shareconversation.com www.shareconversation.com;
+    {% endif %}
 
     root /var/www/shareprompts;
 
@@ -12,7 +14,7 @@ server {
 
     # Enable CORS
     add_header Access-Control-Allow-Origin "$http_origin";
-    add_header Access-Control-Allow-Headers "authorization,Content-Type";
+    add_header Access-Control-Allow-Headers "authorization,Content-Type,credentials";
     add_header Access-Control-Allow-Credentials "true";
     add_header Access-Control-Allow-Methods "GET, POST, DELETE, OPTIONS";
 
@@ -22,7 +24,7 @@ server {
 
     location /conversation/ {
         client_max_body_size 2M;
-        proxy_pass http://127.0.0.1:9090/conversation/;
+        proxy_pass http://localhost:9090/conversation/;
         # Turn on microcaching (for GET)
         proxy_cache cache;
         proxy_cache_valid 200 30m;
@@ -33,10 +35,15 @@ server {
     }
     location /api/ {
         client_max_body_size 2M;
-        proxy_pass http://127.0.0.1:9090/;
+        proxy_pass http://localhost:9090/;
     }
-
+    {% if ansible_connection == 'local' %}
+    location / {
+        proxy_pass http://localhost:5173/;
+    }
+    {% else %}
     location / {
         try_files $uri $uri/ =404;
     }
+    {% endif %}
 }

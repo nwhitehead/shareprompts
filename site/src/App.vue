@@ -1,6 +1,6 @@
 <script setup>
 
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 
 const configuration = reactive({
     avatar: false,
@@ -8,10 +8,46 @@ const configuration = reactive({
     research: true,
 });
 
+const authenticated = ref(null);
+const needAuthentication = ref(false);
 const token = ref(null);
 const conversations = ref([]);
 const MAXLENGTH = 200;
-const SERVER = 'http://localhost';
+
+const SERVER = (import.meta.env.MODE === 'development') ? 'http://localhost' : location.origin;
+
+onMounted(async () => {
+    google.accounts.id.initialize({
+        client_id: "188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com",
+        callback: async (response) => {
+            console.log("Encoded JWT ID token: " + response.credential);
+            const resp = await authenticateWithServer(response.credential);
+            console.log(`Got response ${resp}`);
+            authenticated.value = await checkIfAuthenticated();
+            console.log(`Authenticated=${authenticated.value}`);
+        },
+    });
+    console.log("Let's check if we need to show Google signin button");
+    console.log(import.meta.env.MODE);
+    authenticated.value = await checkIfAuthenticated();
+    console.log(`Authenticated=${authenticated.value}`);
+    if (!authenticated.value) {
+        needAuthentication.value = true;
+    }
+});
+
+watch(needAuthentication, (value) => {
+    // If value turned to true, render the Google button directly
+    if (value) {
+        google.accounts.id.renderButton(
+            document.getElementById("googleButton"),
+            {
+                theme: "outline",
+                size: "large",
+            }
+        );
+    }
+});
 
 function dateRepresentation(timestamp) {
     const d = new Date(timestamp.secs_since_epoch * 1000 + timestamp.nanos_since_epoch / 1000000);
@@ -37,7 +73,6 @@ async function deleteAction(id) {
     const addr = `${SERVER}/api/conversation/${id}`;
     const options = {
         method: 'DELETE',
-        mode: 'cors',
         headers: {
             'authorization': `Bearer ${token.value}`,
         },
@@ -47,6 +82,37 @@ async function deleteAction(id) {
     updateConversationsFromServer();
 }
 
+async function checkIfAuthenticated() {
+    const addr = `${SERVER}/api/authenticated`;
+    const options = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+        },
+    };
+    try {
+        const response = await fetch(addr, options);
+        return await response.ok;
+    } catch(err) {
+        return false;
+    }
+}
+
+async function authenticateWithServer(token) {
+    const addr = `${SERVER}/api/authenticate`;
+    const options = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+            'authorization': `Bearer ${token}`,
+        },
+    };
+    const response = await fetch(addr, options);
+    return await response.ok;
+}
+
 async function updateConversationsFromServer() {
     const addr = `${SERVER}/api/conversations`;
     const options = {
@@ -54,6 +120,7 @@ async function updateConversationsFromServer() {
         mode: 'cors',
         headers: {
             'content-type': 'application/json',
+            'credentials': 'include',
             'authorization': `Bearer ${token.value}`,
         },
     };
@@ -94,23 +161,8 @@ span.note {
         <h1 className="text-2xl font-bold">
             Share Conversation
         </h1>
-
-        <div id="g_id_onload"
-            data-client_id="188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.googleusercontent.com"
-            data-context="signin"
-            data-ux_mode="popup"
-            data-callback="appAuthenticate"
-            data-auto_select="true"
-            data-itp_support="true">
-        </div>
-
-        <div class="g_id_signin"
-            data-type="standard"
-            data-shape="pill"
-            data-theme="outline"
-            data-text="signin_with"
-            data-size="large"
-            data-logo_alignment="left">
+        
+        <div id="googleButton">
         </div>
 
         <p v-for="item in conversations">

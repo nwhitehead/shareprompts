@@ -2,10 +2,12 @@ extern crate diesel;
 
 mod schema;
 
-use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_session::{
+    config::PersistentSession, storage::CookieSessionStore, Session, SessionMiddleware,
+};
 use actix_web::{
-    cookie::Key, delete, error, get, middleware, post, web, App, Error, HttpResponse, HttpServer,
-    Responder,
+    cookie::time::Duration, cookie::Key, delete, error, get, middleware, post, web, App, Error,
+    HttpResponse, HttpServer, Responder,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::offset::Utc;
@@ -414,18 +416,62 @@ async fn validate_bearer_access_token(token: &str) -> Result<String, TokenError>
     }
 }
 
+/// Check if user is authenticated
+// This endpoint does not perform authentication.
+// Respond with 200 if authenticated, 401 if not
+#[post("/authenticated")]
+async fn authenticated(
+    state: web::Data<AppState>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    info!("Checking cookie");
+    if let Some(session_user_id) = session.get::<String>("user_id")? {
+        info!("user_id is {}", session_user_id);
+        return Ok(HttpResponse::Ok().body("Authenticated"));
+    }
+    info!("Cookie check failed");
+    Ok(HttpResponse::Unauthorized().body("Not authenticated"))
+}
+
+/// Authenticate user
+// Client provides Google identity token (from GIS button thingy)
+// Sends that token as "authorization: Bearer ..."
+// If it works, response will be 200 with "set-cookie: ..."
+// The session cookie is a JWT token that represents the authenticated session
+#[post("/authenticate")]
+async fn authenticate(
+    auth: BearerAuth,
+    state: web::Data<AppState>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    if let Some(session_user_id) = session.get::<String>("user_id")? {
+        info!("user_id is {}", session_user_id);
+        return Ok(HttpResponse::Ok().body("Authenticated"));
+    }
+    info!("Starting authentication");
+    let token = auth.token();
+    info!("Bearer token was: {}", &token);
+    let mut jwks = state.jwks.lock().unwrap();
+    let user_id = match validate_bearer_identity_token(&mut jwks, &token).await {
+        Err(_err) => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
+        Ok(uid) => uid,
+    };
+    info!("Setting session to have user_id={}", user_id);
+    session.insert("user_id", user_id)?;
+    info!("Session inserted");
+    Ok(HttpResponse::Ok().body("Authenticated"))
+}
+
 #[get("/conversations")]
 async fn get_my_conversations(
     auth: BearerAuth,
     pool: web::Data<DbPool>,
     state: web::Data<AppState>,
+    session: Session,
 ) -> actix_web::Result<impl Responder> {
-    let token = auth.token();
-    info!("Bearer token was: {}", &token);
-    let mut jwks = state.jwks.lock().unwrap(); //map_err(error::ErrorInternalServerError)?;
-    let user_id = match validate_bearer_identity_token(&mut jwks, &token).await {
-        Err(_err) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
-        Ok(uid) => uid,
+    let user_id = match session.get::<String>("user_id")? {
+        Some(session_user_id) => session_user_id,
+        None => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
     };
     // Don't block server thread, db stuff is synchronous
     let conversations = web::block(move || {
@@ -586,9 +632,8 @@ async fn main() -> std::io::Result<()> {
     // Setup cookie secret key
     info!("Generating cookie secret key");
     let secret = std::env::var("SECRET").expect("SECRET should be set");
-    let secret_key = Key::from(secret.as_bytes());
+    let secret_key = Key::derive_from(secret.as_bytes());
 
-    let sessions = SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone());
     let state = web::Data::new(AppState {
         jwks: std::sync::Mutex::new(JsonWebKeysSet {
             keys: std::collections::HashMap::new(),
@@ -596,9 +641,18 @@ async fn main() -> std::io::Result<()> {
         }),
     });
 
+    const COOKIE_DURATION_SECS: i64 = 60 * 60 * 24 * 30; // 30 days
+
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::seconds(COOKIE_DURATION_SECS)),
+                    )
+                    .build(),
+            )
             .app_data(web::Data::new(pool.clone()))
             .app_data(state.clone())
             .service(get_conversation_json)
@@ -606,6 +660,8 @@ async fn main() -> std::io::Result<()> {
             .service(post_conversation)
             .service(delete_conversation)
             .service(get_my_conversations)
+            .service(authenticate)
+            .service(authenticated)
     })
     .bind("0.0.0.0:9090")?
     .run()

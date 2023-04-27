@@ -2,8 +2,8 @@
     "scripts": {
         "build": "npx tailwindcss -i ./site/index.css -o ./dist/index.css && rollup -c && cargo build --release",
         "test": "npx tailwindcss -i ./site/index.css -o ./dist/index.css && rollup -c && cargo run",
-        "local_setup": "ansible-playbook --connection=local --extra-vars \"variable_host=localhost\" ../ansible/setup.yml --become",
-        "local_deploy": "ansible-playbook --connection=local --extra-vars \"variable_host=localhost\" ../ansible/deploy.yml --become"
+        "local_setup": "sudo ls && ansible-playbook --connection=local --extra-vars \"variable_host=localhost\" ../ansible/setup.yml --become",
+        "local_deploy": "sudo ls && ansible-playbook --connection=local --extra-vars \"variable_host=localhost\" ../ansible/deploy.yml --become"
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^15.0.2",

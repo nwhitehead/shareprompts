@@ -2,7 +2,7 @@
   tasks:
     - name: Synchronize site files
       synchronize:
-        src: ../site/
+        src: ../site/dist/
         dest: /var/www/shareprompts/
     - name: Synchronize backend executable files
       synchronize:

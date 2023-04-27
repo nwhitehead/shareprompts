@@ -12,5 +12,11 @@ export default defineConfig({
                 main: resolve(__dirname, 'index.html'),
             }
         }
-    }
+    },
+    server: {
+        port: 5173,
+        hmr: {
+            port: 5173,
+        }
+    },
 })
