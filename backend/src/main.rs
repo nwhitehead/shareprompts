@@ -26,6 +26,7 @@ type DbError = Box<dyn std::error::Error + Send + Sync>;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use schema::conversations;
+use schema::users;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // Templates
@@ -84,6 +85,14 @@ pub struct Conversation {
     pub research: bool,
     pub deleted: bool,
     pub user_id: String,
+}
+
+// Model for users in the database
+#[derive(Debug, Clone, Queryable, Insertable)]
+#[diesel(table_name = users)]
+pub struct User {
+    pub user_id: String,
+    pub conversation_count: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -222,6 +231,21 @@ fn find_conversation_by_id(
         Ok(Some(result))
     }
 }
+
+// Get conversation count so we can limit free users
+fn get_conversation_count(
+    conn: &mut DbConnection,
+    userid: String,
+) -> Result<i32, DbError> {
+    use self::schema::users::dsl::*;
+    let results = users
+        .filter(user_id.eq(userid))
+        .limit(1)
+        .load::<User>(conn)
+        .expect("Error finding users");
+    Ok(0)
+}
+
 
 // Look in DB for all conversations of a user
 fn find_conversations_by_user(

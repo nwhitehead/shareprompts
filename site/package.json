@@ -10,6 +10,7 @@
     "local_deploy": "sudo ls && vite build && ansible-playbook --connection=local --extra-vars \"variable_host=localhost\" ../ansible/deploy.yml --become"
   },
   "dependencies": {
+    "dayjs": "^1.11.7",
     "vue": "^3.2.47"
   },
   "devDependencies": {
