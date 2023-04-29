@@ -52,15 +52,11 @@ async function handleClick(button) {
     }
     console.log('ConversationData', conversationData);
 
-    // console.log('config', config);
-    // console.log('conversationData', conversationData);
-    // console.log('oauth2 token', token);
-    // // Actually POST it
-    // console.log('POSTing');
+    const openaiid = document.location.pathname;
     const addr = `https://shareconversation.com/api/conversation/`;
-    // console.log(`addr=${addr}`);
     const data = {
         title,
+        openaiid,
         model,
         public: config.public,
         research: config.research,
@@ -75,10 +71,8 @@ async function handleClick(button) {
         },
         body: JSON.stringify(data, null, 2),
     };
-    // console.log('fetch POST options', options);
     const response = await fetch(addr, options);
     const jsondata = await response.json();
-    // console.log('Conversation data is', jsondata);
     // Go to new tab with fresh convo
     const url = `https://shareconversation.com/conversation/html/${jsondata}`;
     button.textContent = "Share";

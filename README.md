@@ -14,7 +14,7 @@ Backend is Rust with Postgres db. Frontend is JavaScript. Learning as I go here.
 
 Command to make a snapshot db backup (saved locally in timestamped file):
 
-    ssh root@shareconversation.com "su - postgres -c \"pg_dump --clean sharedprompts\"" > ~postgres/sharedprompts-`date +"%FT%H%M"`.sql
+    ssh root@shareconversation.com "su - postgres -c \"pg_dump --clean sharedprompts\"" > sharedprompts-`date +"%FT%H%M"`.sql
 
 To restore from backup, assuming backup file is locally copied to `~postgres`
 location:
@@ -33,25 +33,20 @@ application id and everything. From within the extension we can access
 by the manifest file. These tokens are full "access tokens". I don't see a way
 to just get id tokens.
 
-For the website, there are some Google Identity Services for Web components.
-Basically you load the Google Client API JavaScript
-and set up a `div` with some fields and it will make it a nice "Sign in with Google" button. The result of this flow is an access
-token.
-
-From there the backend relies on the tokens to authenticate the user. Right now
-I'm using the API endpoint:
+To validate access tokens, I use:
 
     https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=...
 
-This works for the access token, you have to switch it to `id_token` for the GIS
-flow.
 
-The proper way to do this is to validate the text itself. You can parse the
-token, then you need to verify the cryptographic signature. That is complicated
-by the fact that you need a fresh Google key to do the verification.
+For the website, there are some Google Identity Services for Web components.
+Basically you load the Google Client API JavaScript and set up a `div` with some
+fields and it will make it a nice "Sign in with Google" button. The result of
+this flow is an id token.
 
-Google keys are in JWKS (JSON Web Key Set) format at:
+To validate the id token you need the Google public keys. Google keys are in
+JWKS (JSON Web Key Set) format at:
 
     https://www.googleapis.com/oauth2/v3/certs
 
-They expire every 5 hours or so. So the server needs to cache them correctly.
+The server caches them and uses cached values. The server grabs the keys every
+few hours whatever the cache control headers say.

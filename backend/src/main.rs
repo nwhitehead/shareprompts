@@ -79,6 +79,7 @@ handlebars_helper!(string_equal: |*args| args[0] == args[1]);
 #[diesel(table_name = conversations)]
 pub struct Conversation {
     pub id: String,
+    pub openaiid: String,
     pub contents: String, // JSON for ConversationContents
     pub metadata: String, // JSON for ConversationMetadata
     pub public: bool,
@@ -118,6 +119,7 @@ pub struct ConversationMetadata {
 // Information that is required when making a new conversation
 #[derive(Serialize, Deserialize)]
 pub struct NewConversation {
+    pub openaiid: String,
     pub title: String,
     pub contents: ConversationContents,
     pub model: String,
@@ -573,6 +575,7 @@ async fn post_conversation(
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
             id: new_uuid.clone(),
+            openaiid: form.openaiid.clone(),
             contents: json_contents,
             metadata: json_metadata,
             public: form.public,

@@ -3,6 +3,7 @@
 diesel::table! {
     conversations (id) {
         id -> Text,
+        openaiid -> Text,
         contents -> Text,
         metadata -> Text,
         public -> Bool,
