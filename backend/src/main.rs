@@ -16,6 +16,8 @@ use diesel::{prelude::*, r2d2};
 use handlebars::{handlebars_helper, Handlebars};
 use log::info;
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
+use std::string::String;
 use std::vec::Vec;
 
 // Types related to Postgres connection to database
@@ -79,7 +81,7 @@ handlebars_helper!(string_equal: |*args| args[0] == args[1]);
 #[diesel(table_name = conversations)]
 pub struct Conversation {
     pub id: String,
-    pub openaiid: String,
+    pub hmac: String,
     pub contents: String, // JSON for ConversationContents
     pub metadata: String, // JSON for ConversationMetadata
     pub public: bool,
@@ -96,13 +98,13 @@ pub struct User {
     pub conversation_count: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct Utterance {
     pub who: String, // either "gpt" or "human"
     pub what: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct ConversationContents {
     pub avatar: String, // data URL of avatar, (may be anonymized)
     pub dialog: Vec<Utterance>,
@@ -111,9 +113,20 @@ pub struct ConversationContents {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConversationMetadata {
     pub title: String,
+    pub openaiid: String,
     pub model: String,
     pub creationdate: std::time::SystemTime,
     pub length: usize,
+}
+
+impl std::hash::Hash for ConversationMetadata {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.title.hash(state);
+        self.openaiid.hash(state);
+        self.model.hash(state);
+        // Ignore creationdate for hash
+        self.length.hash(state);
+    }
 }
 
 // Information that is required when making a new conversation
@@ -235,10 +248,7 @@ fn find_conversation_by_id(
 }
 
 // Get conversation count so we can limit free users
-fn get_conversation_count(
-    conn: &mut DbConnection,
-    userid: String,
-) -> Result<i32, DbError> {
+fn get_conversation_count(conn: &mut DbConnection, userid: String) -> Result<i32, DbError> {
     use self::schema::users::dsl::*;
     let results = users
         .filter(user_id.eq(userid))
@@ -247,7 +257,6 @@ fn get_conversation_count(
         .expect("Error finding users");
     Ok(0)
 }
-
 
 // Look in DB for all conversations of a user
 fn find_conversations_by_user(
@@ -329,6 +338,7 @@ async fn get_conversation_html(
                     INDEX_HBS,
                     &serde_json::json!({
                         "style": INDEX_CSS,
+                        "main_js": MAIN_JS,
                         "title": metadata.title,
                         "model": metadata.model,
                         "avatar": contents.avatar,
@@ -336,6 +346,8 @@ async fn get_conversation_html(
                         "dialog": contents.dialog,
                         "timestamp": timestamp_str,
                         "main_js": MAIN_JS,
+                        "openaiid": metadata.openaiid,
+                        "hmac": &conv.hmac,
                     }),
                 )
                 .map_err(error::ErrorInternalServerError)?;
@@ -461,10 +473,7 @@ async fn authenticated(
 
 /// Log out user
 #[post("/logout")]
-async fn logout(
-    state: web::Data<AppState>,
-    session: Session,
-) -> actix_web::Result<impl Responder> {
+async fn logout(state: web::Data<AppState>, session: Session) -> actix_web::Result<impl Responder> {
     session.purge();
     Ok(HttpResponse::Ok().body("Logged out"))
 }
@@ -566,6 +575,7 @@ async fn post_conversation(
         let json_contents = serde_json::to_string(&form.contents)?;
         let meta_data = ConversationMetadata {
             title: form.title.clone(),
+            openaiid: form.openaiid.clone(),
             model: form.model.clone(),
             creationdate: chrono::Utc::now().into(),
             length: form.contents.dialog.len(),
@@ -573,9 +583,14 @@ async fn post_conversation(
         let json_metadata = serde_json::to_string(&meta_data)?;
         let mut conn = pool.get()?;
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        json_contents.hash(&mut h);
+        json_metadata.hash(&mut h);
+        userid.hash(&mut h);
+        let digest = format!("{:#x}", h.finish());
         let nc = Conversation {
             id: new_uuid.clone(),
-            openaiid: form.openaiid.clone(),
+            hmac: digest,
             contents: json_contents,
             metadata: json_metadata,
             public: form.public,
@@ -685,7 +700,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
                     .session_lifecycle(
-                        PersistentSession::default().session_ttl(Duration::seconds(COOKIE_DURATION_SECS)),
+                        PersistentSession::default()
+                            .session_ttl(Duration::seconds(COOKIE_DURATION_SECS)),
                     )
                     .build(),
             )

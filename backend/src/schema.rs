@@ -3,7 +3,7 @@
 diesel::table! {
     conversations (id) {
         id -> Text,
-        openaiid -> Text,
+        hmac -> Text,
         contents -> Text,
         metadata -> Text,
         public -> Bool,
@@ -20,7 +20,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    conversations,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(conversations, users,);

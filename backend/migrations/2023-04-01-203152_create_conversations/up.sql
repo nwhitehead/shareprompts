@@ -1,6 +1,6 @@
 CREATE TABLE conversations (
   id TEXT PRIMARY KEY,
-  openaiid TEXT NOT NULL,
+  hmac TEXT NOT NULL,
   contents TEXT NOT NULL,
   metadata TEXT NOT NULL,
   public BOOLEAN NOT NULL DEFAULT TRUE,

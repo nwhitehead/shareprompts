@@ -50,3 +50,9 @@ JWKS (JSON Web Key Set) format at:
 
 The server caches them and uses cached values. The server grabs the keys every
 few hours whatever the cache control headers say.
+
+## Currently working on
+
+* User conversation counts, for free/paid check
+* Integrating with extpay
+* Updating previously shared conversations if you share same convo again
