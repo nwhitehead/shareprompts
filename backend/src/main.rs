@@ -157,6 +157,7 @@ pub struct ConversationInfo {
     pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
+    pub hmac: String,
 }
 
 // Information returned from GET for list of conversations
@@ -166,6 +167,7 @@ pub struct ShortConversationInfo {
     pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
+    pub hmac: String,
 }
 
 #[derive(Debug)]
@@ -267,6 +269,29 @@ fn get_conversation_count(conn: &mut DbConnection, userid: String) -> Result<i32
     Ok(0)
 }
 
+// See if a conversation already exists (by hmac)
+// If exists, returns Some<id>, otherwise None
+fn conversation_exists(
+    conn: &mut DbConnection,
+    uid: &String,
+    hmac_digest: &String,
+) -> Result<Option<String>, DbError> {
+    use self::schema::conversations::dsl::*;
+    let results = conversations
+        .filter(user_id.eq(uid))
+        .filter(hmac.eq(hmac_digest))
+        .filter(deleted.eq(false))
+        .limit(1)
+        .load::<Conversation>(conn)
+        .expect("Error finding conversation");
+    if results.len() == 0 {
+        Ok(None)
+    } else {
+        let result = results[0].id.clone();
+        Ok(Some(result))
+    }
+}
+
 // Look in DB for all conversations of a user
 fn find_conversations_by_user(
     conn: &mut DbConnection,
@@ -277,6 +302,7 @@ fn find_conversations_by_user(
     conversations
         .filter(user_id.eq(uid))
         .filter(deleted.eq(deleted_entry))
+        .order_by(id.desc())
         .load::<Conversation>(conn)
         .expect("Error finding conversation")
         .iter()
@@ -286,6 +312,7 @@ fn find_conversations_by_user(
                 metadata: serde_json::from_str(&conv.metadata)?,
                 public: conv.public,
                 research: conv.research,
+                hmac: conv.hmac.clone(),
             })
         })
         .collect()
@@ -312,6 +339,7 @@ async fn get_conversation_json(
                 metadata: serde_json::from_str(&conv.metadata)?,
                 public: conv.public,
                 research: conv.research,
+                hmac: conv.hmac,
             };
             Ok(HttpResponse::Ok().json(conversation_info))
         }
@@ -590,12 +618,19 @@ async fn post_conversation(
         };
         let json_metadata = serde_json::to_string(&meta_data)?;
         let mut conn = pool.get()?;
-        let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let mut h = std::collections::hash_map::DefaultHasher::new();
-        json_contents.hash(&mut h);
-        json_metadata.hash(&mut h);
+        info!("Hash at start: {:#x}", h.finish());
+        form.contents.hash(&mut h);
+        info!("Hash after contents: {:#x}", h.finish());
+        meta_data.hash(&mut h);
+        info!("Hash after metadata: {:#x}", h.finish());
         userid.hash(&mut h);
+        info!("Hash after userid: {:#x}", h.finish());
         let digest = format!("{:#x}", h.finish());
+        if let Some(uuid) = conversation_exists(&mut conn, &userid, &digest)? {
+            return Ok(uuid);
+        }
+        let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
             id: new_uuid.clone(),
             hmac: digest,
