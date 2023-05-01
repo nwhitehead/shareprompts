@@ -2,9 +2,21 @@ import { marked } from 'marked';
 import hljs from 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/es/highlight.min.js';
 
 function handleClick() {
-    window.open('https://shareconversation.com/', '_blank');
+    window.open('/', '_blank');
 }
 window.handleClick = handleClick;
+
+function handleCopy() {
+    navigator.clipboard.writeText(document.location.href);
+    console.log('Copied!');
+    const copied = document.querySelector("#copied");
+    const old_visibility = copied.style.visibility;
+    copied.style.visibility = "visible";
+    setTimeout(() => {
+        copied.style.visibility = old_visibility;
+    }, 1000);
+}
+window.handleCopy = handleCopy;
 
 window.addEventListener("DOMContentLoaded", (event) => {
     // Get everything in .markdown class, interpret as markdown and update DOM

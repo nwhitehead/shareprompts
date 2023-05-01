@@ -4,6 +4,22 @@
       synchronize:
         src: ../site/dist/
         dest: /var/www/shareprompts/
+      notify: Restart shareprompts-backend-api
+    - name: Synchronize backend generated site files
+      synchronize:
+        src: ../backend/dist/
+        dest: /app/shareprompts/site
+      notify: Restart shareprompts-backend-api
+    - name: Synchronize backend site files
+      synchronize:
+        src: ../backend/site/index.hbs
+        dest: /app/shareprompts/site/index.hbs
+      notify: Restart shareprompts-backend-api
+    - name: Synchronize backend site files
+      synchronize:
+        src: ../backend/site/chatgpt.png
+        dest: /app/shareprompts/site/chatgpt.png
+      notify: Restart shareprompts-backend-api
     - name: Synchronize backend executable files
       synchronize:
         src: ../backend/target/release/shareprompts-backend-api

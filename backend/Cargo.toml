@@ -24,3 +24,4 @@ base64 = "*"
 oauth2 = "4.3.0"
 jsonwebtoken = "8.3.0"
 actix-session = { version = "0.7.2", features = ["cookie-session"] }
+lazy_static = "1.4.0"

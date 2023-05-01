@@ -1,5 +1,8 @@
 extern crate diesel;
 
+#[macro_use]
+extern crate lazy_static;
+
 mod schema;
 
 use actix_session::{
@@ -31,12 +34,18 @@ use schema::conversations;
 use schema::users;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
-// Templates
-const INDEX_HBS: &str = include_str!("../site/index.hbs");
-const INDEX_CSS: &str = include_str!("../dist/index.css");
-const CHATGPT_PNG: &[u8] = include_bytes!("../site/chatgpt.png");
-const MAIN_JS: &str = include_str!("../dist/main.js");
+// True constants
 const EXPIRATION_SECONDS: u64 = 60 * 60 * 5;
+
+// Templates
+// Can't load during initialization.
+// Lazy static means they are actually loaded when referenced.
+lazy_static! {
+    static ref INDEX_HBS: String = std::fs::read_to_string("./site/index.hbs").expect("Read INDEX_HBS");
+    static ref INDEX_CSS: String = std::fs::read_to_string("./site/index.css").expect("Read INDEX_CSS");
+    static ref CHATGPT_PNG: Vec<u8> = std::fs::read("./site/chatgpt.png").expect("Read CHATGPT_PNG");
+    static ref MAIN_JS: String = std::fs::read_to_string("./site/main.js").expect("Read MAIN_JS");
+}
 
 // Google keys
 #[derive(Debug, Deserialize)]
@@ -330,23 +339,22 @@ async fn get_conversation_html(
             let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
             let metadata: ConversationMetadata = serde_json::from_str(&conv.metadata)?;
             let chatgpt_uri: String =
-                format!("data:image/png;base64,{}", base64::encode(CHATGPT_PNG));
+                format!("data:image/png;base64,{}", base64::encode(&*CHATGPT_PNG));
             let timestamp: DateTime<Utc> = metadata.creationdate.into();
             let timestamp_str: String = format!("{}", timestamp.format("%Y/%m/%d %T UTC"));
             let body = reg
                 .render_template(
-                    INDEX_HBS,
+                    &INDEX_HBS,
                     &serde_json::json!({
-                        "style": INDEX_CSS,
-                        "main_js": MAIN_JS,
+                        "style": *INDEX_CSS,
+                        "main_js": *MAIN_JS,
                         "title": metadata.title,
                         "model": metadata.model,
-                        "avatar": contents.avatar,
-                        "chatgpt_uri": chatgpt_uri,
-                        "dialog": contents.dialog,
-                        "timestamp": timestamp_str,
-                        "main_js": MAIN_JS,
                         "openaiid": metadata.openaiid,
+                        "avatar": contents.avatar,
+                        "dialog": contents.dialog,
+                        "chatgpt_uri": chatgpt_uri,
+                        "timestamp": timestamp_str,
                         "hmac": &conv.hmac,
                     }),
                 )
