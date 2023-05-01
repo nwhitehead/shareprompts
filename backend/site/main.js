@@ -7,14 +7,19 @@ function handleClick() {
 window.handleClick = handleClick;
 
 function handleCopy() {
+    // Copy current href to clipboard
     navigator.clipboard.writeText(document.location.href);
-    console.log('Copied!');
+    // Now show notification bubble
     const copied = document.querySelector("#copied");
     const old_visibility = copied.style.visibility;
+    const old_display = copied.style.display;
     copied.style.visibility = "visible";
+    copied.style.display = "block";
+    // Reset back after a brief time
     setTimeout(() => {
         copied.style.visibility = old_visibility;
-    }, 1000);
+        copied.style.display = old_display;
+    }, 2000);
 }
 window.handleCopy = handleCopy;
 

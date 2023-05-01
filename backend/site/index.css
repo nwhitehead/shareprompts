@@ -3,9 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-a {
-    @apply underline;
-}
 ol {
     @apply list-decimal;
     @apply list-outside;

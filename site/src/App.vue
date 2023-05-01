@@ -66,6 +66,55 @@ function firstLine(conversation) {
 function link(id) {
     return `${SERVER}/conversation/html/${id}`;
 }
+
+function openai_link(id) {
+    return `https://chat.openai.com/${id}`;
+}
+
+/// Generic function to convert JS array into CSV and prompt user to save with filename
+// filename: string
+// rows: [[string]]
+// comments: [[string]]
+// rows and comments are both in same format
+// comments will be prefixed by "# " and ignored by parser.
+function exportCsv(filename, rows, comments) {
+    function process(row) {
+        let res = '';
+        for (let j = 0; j < row.length; j++) {
+            let val = row[j].toString();
+            let result = val.replace(/"/g, '""');
+            if (result.search(/("|,|\n)/g) >= 0) {
+                result = '"' + result + '"';
+            }
+            if (j > 0) {
+                res += ',';
+            }
+            res += result;
+        }
+        return res + '\n';
+    }
+
+    let csvFile = '';
+    if (comments !== undefined) {
+        for (let i = 0; i < comments.length; i++) {
+            csvFile += '# ' + process(comments[i]);
+        }
+    }
+    for (let i = 0; i < rows.length; i++) {
+        csvFile += process(rows[i]);
+    }
+
+    const blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 async function downloadMarkdown(id) {
     if (!authenticated.value) {
         return;
@@ -80,7 +129,22 @@ async function downloadMarkdown(id) {
     };
     const response = await fetch(addr, options);
     const data = await response.json();
-    console.log(data);
+    let comments = [];
+    comments.push(['link', link(data.id)]);
+    const date = data.metadata.creationdate.secs_since_epoch + data.metadata.creationdate.nanos_since_epoch * 1e-9;
+    comments.push(['date', date]);
+    comments.push(['title', data.metadata.title]);
+    comments.push(['avatar', data.contents.avatar]);
+    comments.push(['model', data.metadata.model]);
+    comments.push(['openai_link', openai_link(data.metadata.openaiid)]);
+    comments.push(['length', data.metadata.length]);
+    let rows = [];
+    rows.push(['who', 'what']);
+    for (let i = 0; i < data.contents.dialog.length; i++) {
+        const dialog_row = data.contents.dialog[i];
+        rows.push([dialog_row.who, dialog_row.what]);
+    }
+    exportCsv(`conversation-${data.id}.csv`, rows, comments);
 }
 
 async function deleteAction(id) {
@@ -246,13 +310,5 @@ span.note {
                 </tr>
             </tbody>
         </table>
-        <!-- <p v-for="item in conversations">
-            <a :href="link(item.id)">{{ item.metadata.title }}</a>
-            - {{ dateRepresentation(item.metadata.creationdate) }}
-            -
-            <button @click="deleteAction(item.id)" class="btn">
-            </button>
-        </p> -->
-
     </div>
 </template>
