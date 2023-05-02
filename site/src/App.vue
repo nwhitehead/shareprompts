@@ -65,7 +65,7 @@ function firstLine(conversation) {
 }
 
 function link(id) {
-    return `${SERVER}/conversation/html/${id}`;
+    return `${SERVER}/conversation/html/${id}?cache=0`;
 }
 
 function openai_link(id) {
@@ -355,13 +355,13 @@ span.note {
         </table>
 
         <p v-if="showDeleted">
-            <span class="note">Note</span>: Conversations marked for deletion cannot be viewed by anyone. Anyone following
-            a link to a deleted conversation will see an error page. It may take up to 5 minutes for actions to take effect.
+            <span class="note">Note</span>: Conversations marked deleted cannot be viewed by anyone. Anyone following
+            a link to a deleted conversation will see an error page. Changes take effect after one minute.
         </p>
         <p v-if="showDeleted">
-            <span class="note">Note</span>: Conversations marked for deletion may be permanently removed from the server 
-            any time after one day of being marked for deletion, depending on server storage availability. Permanently removed
-            conversations cannot be undeleted.
+            <span class="note">Note</span>: Conversations marked deleted may be permanently removed from the server 
+            any time after one day of being marked deleted, depending on server storage availability. Once a deleted
+            conversation is permanently removed it cannot be undeleted.
         </p>
 
     </div>

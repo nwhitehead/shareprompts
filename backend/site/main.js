@@ -7,8 +7,8 @@ function handleClick() {
 window.handleClick = handleClick;
 
 function handleCopy() {
-    // Copy current href to clipboard
-    navigator.clipboard.writeText(document.location.href);
+    // Copy current location to clipboard (take out any args)
+    navigator.clipboard.writeText(document.location.origin + document.location.pathname);
     // Now show notification bubble
     const copied = document.querySelector("#copied");
     const old_visibility = copied.style.visibility;
