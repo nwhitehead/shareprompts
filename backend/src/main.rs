@@ -9,7 +9,7 @@ use actix_session::{
     config::PersistentSession, storage::CookieSessionStore, Session, SessionMiddleware,
 };
 use actix_web::{
-    cookie::time::Duration, cookie::Key, delete, error, get, middleware, post, web, App, Error,
+    cookie::time::Duration, cookie::Key, delete, error, get, middleware, post, web, App,
     HttpResponse, HttpServer, Responder,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -41,9 +41,12 @@ const EXPIRATION_SECONDS: u64 = 60 * 60 * 5;
 // Can't load during initialization.
 // Lazy static means they are actually loaded when referenced.
 lazy_static! {
-    static ref INDEX_HBS: String = std::fs::read_to_string("./site/index.hbs").expect("Read INDEX_HBS");
-    static ref INDEX_CSS: String = std::fs::read_to_string("./site/index.css").expect("Read INDEX_CSS");
-    static ref CHATGPT_PNG: Vec<u8> = std::fs::read("./site/chatgpt.png").expect("Read CHATGPT_PNG");
+    static ref INDEX_HBS: String =
+        std::fs::read_to_string("./site/index.hbs").expect("Read INDEX_HBS");
+    static ref INDEX_CSS: String =
+        std::fs::read_to_string("./site/index.css").expect("Read INDEX_CSS");
+    static ref CHATGPT_PNG: Vec<u8> =
+        std::fs::read("./site/chatgpt.png").expect("Read CHATGPT_PNG");
     static ref MAIN_JS: String = std::fs::read_to_string("./site/main.js").expect("Read MAIN_JS");
 }
 
@@ -261,14 +264,25 @@ fn find_conversation_by_id(
 }
 
 // Get conversation count so we can limit free users
-fn get_conversation_count(conn: &mut DbConnection, userid: String) -> Result<i32, DbError> {
+fn get_conversation_count(conn: &mut DbConnection, userid: &String) -> Result<i32, DbError> {
     use self::schema::users::dsl::*;
     let results = users
         .filter(user_id.eq(userid))
         .limit(1)
         .load::<User>(conn)
         .expect("Error finding users");
-    Ok(0)
+    if results.len() == 0 {
+        let user = User {
+            user_id: userid.clone(),
+            conversation_count: 0,
+        };
+        diesel::insert_into(users)
+            .values(user)
+            .execute(conn)
+            .expect("Error saving new user");
+        return Ok(0);
+    }
+    Ok(results[0].conversation_count)
 }
 
 // See if a conversation already exists (by hmac)
@@ -497,7 +511,6 @@ async fn validate_bearer_access_token(token: &str) -> Result<String, TokenError>
 // Respond with 200 if authenticated, 401 if not
 #[post("/authenticated")]
 async fn authenticated(
-    state: web::Data<AppState>,
     session: Session,
 ) -> actix_web::Result<impl Responder> {
     info!("Checking cookie");
@@ -511,7 +524,7 @@ async fn authenticated(
 
 /// Log out user
 #[post("/logout")]
-async fn logout(state: web::Data<AppState>, session: Session) -> actix_web::Result<impl Responder> {
+async fn logout(session: Session) -> actix_web::Result<impl Responder> {
     session.purge();
     Ok(HttpResponse::Ok().body("Logged out"))
 }
@@ -548,7 +561,6 @@ async fn authenticate(
 #[post("/conversations")]
 async fn get_my_conversations(
     pool: web::Data<DbPool>,
-    state: web::Data<AppState>,
     session: Session,
 ) -> actix_web::Result<impl Responder> {
     let user_id = match session.get::<String>("user_id")? {
@@ -666,7 +678,6 @@ fn initialize_db_pool() -> DbPool {
 #[post("/conversation/undelete/{id}")]
 async fn undelete_conversation(
     pool: web::Data<DbPool>,
-    state: web::Data<AppState>,
     postid_path: web::Path<(String,)>,
     session: Session,
 ) -> actix_web::Result<impl Responder> {
@@ -706,7 +717,6 @@ async fn undelete_conversation(
 #[delete("/conversation/{id}")]
 async fn delete_conversation(
     pool: web::Data<DbPool>,
-    state: web::Data<AppState>,
     postid_path: web::Path<(String,)>,
     session: Session,
 ) -> actix_web::Result<impl Responder> {
