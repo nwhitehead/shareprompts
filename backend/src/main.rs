@@ -285,6 +285,32 @@ fn get_conversation_count(conn: &mut DbConnection, userid: &String) -> Result<i3
     Ok(results[0].conversation_count)
 }
 
+// Get conversation count so we can limit free users
+fn increment_conversation_count(conn: &mut DbConnection, userid: &String, delta: i32) -> Result<(), DbError> {
+    use self::schema::users::dsl::*;
+    let results = users
+        .filter(user_id.eq(userid))
+        .limit(1)
+        .load::<User>(conn)
+        .expect("Error finding users");
+    if results.len() == 0 {
+        let user = User {
+            user_id: userid.clone(),
+            conversation_count: delta,
+        };
+        diesel::insert_into(users)
+            .values(user)
+            .execute(conn)
+            .expect("Error saving new user");
+        return Ok(());
+    }
+    diesel::update(users.filter(user_id.eq(userid)))
+        .set(conversation_count.eq(conversation_count + delta))
+        .execute(conn)
+        .expect("Error setting user conversation count");
+    Ok(())
+}
+
 // See if a conversation already exists (by hmac)
 // If exists, returns Some<id>, otherwise None
 fn conversation_exists(
