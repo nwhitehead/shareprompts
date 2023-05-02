@@ -22,16 +22,18 @@ server {
         return 204;
     }
 
+    if ($args ~ cache=0){
+        set $bypass 1;
+    }
     location /conversation/ {
         client_max_body_size 2M;
         proxy_pass http://localhost:9090/conversation/;
         # Turn on microcaching (for GET)
         proxy_cache cache;
-        proxy_cache_valid 200 30m;
+        proxy_cache_valid 200 1m;
         proxy_cache_valid 400 404 500 1m;
         proxy_cache_lock on;
-        proxy_cache_use_stale updating;
-        proxy_cache_bypass $arg_should_bypass_cache;
+        proxy_cache_bypass $bypass;
     }
     location /api/ {
         client_max_body_size 2M;

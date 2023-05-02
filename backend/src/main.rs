@@ -157,6 +157,7 @@ pub struct ConversationInfo {
     pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
+    pub deleted: bool,
     pub hmac: String,
 }
 
@@ -167,6 +168,7 @@ pub struct ShortConversationInfo {
     pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
+    pub deleted: bool,
     pub hmac: String,
 }
 
@@ -296,12 +298,10 @@ fn conversation_exists(
 fn find_conversations_by_user(
     conn: &mut DbConnection,
     uid: &String,
-    deleted_entry: bool,
 ) -> Result<Vec<ShortConversationInfo>, DbError> {
     use self::schema::conversations::dsl::*;
     conversations
         .filter(user_id.eq(uid))
-        .filter(deleted.eq(deleted_entry))
         .order_by(id.desc())
         .load::<Conversation>(conn)
         .expect("Error finding conversation")
@@ -312,6 +312,7 @@ fn find_conversations_by_user(
                 metadata: serde_json::from_str(&conv.metadata)?,
                 public: conv.public,
                 research: conv.research,
+                deleted: conv.deleted,
                 hmac: conv.hmac.clone(),
             })
         })
@@ -339,6 +340,7 @@ async fn get_conversation_json(
                 metadata: serde_json::from_str(&conv.metadata)?,
                 public: conv.public,
                 research: conv.research,
+                deleted: conv.deleted,
                 hmac: conv.hmac,
             };
             Ok(HttpResponse::Ok().json(conversation_info))
@@ -556,7 +558,7 @@ async fn get_my_conversations(
     // Don't block server thread, db stuff is synchronous
     let conversations = web::block(move || {
         let mut conn = pool.get()?;
-        find_conversations_by_user(&mut conn, &user_id, /*deleted=*/ false)
+        find_conversations_by_user(&mut conn, &user_id)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;
@@ -661,32 +663,69 @@ fn initialize_db_pool() -> DbPool {
         .expect("database URL should be valid path to Postgres database with username and password")
 }
 
-#[delete("/conversation/{id}")]
-async fn delete_conversation(
-    auth: BearerAuth,
+#[post("/conversation/undelete/{id}")]
+async fn undelete_conversation(
     pool: web::Data<DbPool>,
     state: web::Data<AppState>,
-    id: web::Path<(String,)>,
+    postid_path: web::Path<(String,)>,
+    session: Session,
 ) -> actix_web::Result<impl Responder> {
-    let uid = id.into_inner().0;
-    let token = auth.token();
-    let mut jwks = state.jwks.lock().unwrap();
-    info!("Bearer token was: {}", &token);
-    let userid = match validate_bearer_identity_token(&mut jwks, &token).await {
-        Err(_err) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
-        Ok(uid) => uid,
+    let postid = postid_path.0.clone();
+    let uid = match session.get::<String>("user_id")? {
+        Some(session_user_id) => session_user_id,
+        None => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
     };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
-        let convo = find_conversation_by_id(&mut conn, &uid, /*deleted=*/ false)?;
+        let convo = find_conversation_by_id(&mut conn, &postid, /*deleted=*/ true)?;
         match convo {
             Some(conv) => {
                 use self::schema::conversations::dsl::*;
-                if conv.user_id != userid {
-                    info!("Converation to delete owner does not match requestor");
+                if conv.user_id != uid {
+                    info!("Conversation to undelete owner does not match requestor");
                     Err(LocalError::AuthorizationProblem)
                 } else {
-                    diesel::update(conversations.filter(id.eq(uid)))
+                    diesel::update(conversations.filter(id.eq(postid)))
+                        .set(deleted.eq(false))
+                        .execute(&mut conn)
+                        .expect("Error undeleting conversation");
+                    Ok(())
+                }
+            }
+            _ => {
+                info!("Conversation to undelete not found");
+                Err(LocalError::AuthorizationProblem)
+            }
+        }
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().into())
+}
+
+#[delete("/conversation/{id}")]
+async fn delete_conversation(
+    pool: web::Data<DbPool>,
+    state: web::Data<AppState>,
+    postid_path: web::Path<(String,)>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    let postid = postid_path.0.clone();
+    let uid = match session.get::<String>("user_id")? {
+        Some(session_user_id) => session_user_id,
+        None => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
+    };
+    web::block(move || -> Result<(), LocalError> {
+        let mut conn = pool.get()?;
+        let convo = find_conversation_by_id(&mut conn, &postid, /*deleted=*/ false)?;
+        match convo {
+            Some(conv) => {
+                use self::schema::conversations::dsl::*;
+                if conv.user_id != uid {
+                    info!("Conversation to delete owner does not match requestor");
+                    Err(LocalError::AuthorizationProblem)
+                } else {
+                    diesel::update(conversations.filter(id.eq(postid)))
                         .set(deleted.eq(true))
                         .execute(&mut conn)
                         .expect("Error deleting conversation");
@@ -694,7 +733,7 @@ async fn delete_conversation(
                 }
             }
             _ => {
-                info!("Converation to delete not found");
+                info!("Conversation to delete not found");
                 Err(LocalError::AuthorizationProblem)
             }
         }
@@ -754,6 +793,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_conversation_html)
             .service(post_conversation)
             .service(delete_conversation)
+            .service(undelete_conversation)
             .service(get_my_conversations)
             .service(authenticate)
             .service(authenticated)
