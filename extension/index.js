@@ -41,7 +41,8 @@ async function handleClick(button) {
                 });
             }
         } else if (markdown) {
-            const button = node.querySelector('button.flex.ml-auto');
+            const buttons = node.querySelectorAll('button.flex.ml-auto');
+            const button = buttons[buttons.length - 1];
             button.click();
             const txt = await navigator.clipboard.readText();
             conversationData.dialog.push({
