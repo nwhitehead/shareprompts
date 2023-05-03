@@ -61,6 +61,7 @@ async function handleClick(button) {
         public: config.public,
         research: config.research,
         contents: conversationData,
+        paiduser: true,
     };
     const options = {
         method: 'POST',

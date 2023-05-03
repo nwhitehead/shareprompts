@@ -409,6 +409,9 @@ span.note {
             </tbody>
         </table>
 
+        <p>
+            <span class="note">Note</span>: Anyone with a link to a conversation that is not deleted can view the conversation.
+        </p>
         <p v-if="showDeleted">
             <span class="note">Note</span>: Conversations marked deleted cannot be viewed by anyone. Anyone following
             a link to a deleted conversation will see an error page. Changes take effect after one minute.
