@@ -9,8 +9,12 @@ export default defineConfig({
     build: {
         rollupOptions: {
             input: {
-                main: resolve(__dirname, 'index.html'),
-                manage: resolve(__dirname, 'manage.html'),
+                popup: resolve(__dirname, 'popup.html'),
+                index: resolve(__dirname, 'index.js'),
+                background: resolve(__dirname, 'background.js'),
+            },
+            output: {
+                entryFileNames: '[name].js',
             }
         }
     }
