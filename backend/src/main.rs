@@ -9,7 +9,7 @@ use actix_session::{
     config::PersistentSession, storage::CookieSessionStore, Session, SessionMiddleware,
 };
 use actix_web::{
-    cookie::time::Duration, cookie::Key, delete, error, get, middleware, post, web, App,
+    cookie::time::Duration, cookie::Key, delete, error, get, middleware, patch, post, web, App,
     HttpResponse, HttpServer, Responder,
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -31,7 +31,6 @@ type DbError = Box<dyn std::error::Error + Send + Sync>;
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use schema::conversations;
-use schema::users;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 // True constants
@@ -48,6 +47,10 @@ lazy_static! {
     static ref CHATGPT_PNG: Vec<u8> =
         std::fs::read("./site/chatgpt.png").expect("Read CHATGPT_PNG");
     static ref MAIN_JS: String = std::fs::read_to_string("./site/main.js").expect("Read MAIN_JS");
+    static ref MAX_FREE_USER_COUNT: i64 = std::env::var("MAX_FREE_USER_COUNT")
+        .expect("MAX_FREE_USER_COUNT should be set")
+        .parse()
+        .expect("Cound not parse MAX_FREE_USER_COUNT");
 }
 
 // Google keys
@@ -102,14 +105,6 @@ pub struct Conversation {
     pub user_id: String,
 }
 
-// Model for users in the database
-#[derive(Debug, Clone, Queryable, Insertable)]
-#[diesel(table_name = users)]
-pub struct User {
-    pub user_id: String,
-    pub conversation_count: i32,
-}
-
 #[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct Utterance {
     pub who: String, // either "gpt" or "human"
@@ -148,6 +143,17 @@ pub struct NewConversation {
     pub title: String,
     pub contents: ConversationContents,
     pub model: String,
+    pub public: bool,
+    pub research: bool,
+    pub paiduser: bool,
+}
+
+// Information that is required when patching an existing conversation
+#[derive(Serialize, Deserialize)]
+pub struct PatchConversation {
+    pub id: String,
+    pub contents: ConversationContents,
+    pub metadata: ConversationMetadata,
     pub public: bool,
     pub research: bool,
 }
@@ -264,51 +270,16 @@ fn find_conversation_by_id(
 }
 
 // Get conversation count so we can limit free users
-fn get_conversation_count(conn: &mut DbConnection, userid: &String) -> Result<i32, DbError> {
-    use self::schema::users::dsl::*;
-    let results = users
+// Only counts non-deleted posts
+fn get_conversation_count(conn: &mut DbConnection, userid: &String) -> Result<i64, DbError> {
+    use self::schema::conversations::dsl::*;
+    let results: i64 = conversations
         .filter(user_id.eq(userid))
-        .limit(1)
-        .load::<User>(conn)
-        .expect("Error finding users");
-    if results.len() == 0 {
-        let user = User {
-            user_id: userid.clone(),
-            conversation_count: 0,
-        };
-        diesel::insert_into(users)
-            .values(user)
-            .execute(conn)
-            .expect("Error saving new user");
-        return Ok(0);
-    }
-    Ok(results[0].conversation_count)
-}
-
-// Get conversation count so we can limit free users
-fn increment_conversation_count(conn: &mut DbConnection, userid: &String, delta: i32) -> Result<(), DbError> {
-    use self::schema::users::dsl::*;
-    let results = users
-        .filter(user_id.eq(userid))
-        .limit(1)
-        .load::<User>(conn)
-        .expect("Error finding users");
-    if results.len() == 0 {
-        let user = User {
-            user_id: userid.clone(),
-            conversation_count: delta,
-        };
-        diesel::insert_into(users)
-            .values(user)
-            .execute(conn)
-            .expect("Error saving new user");
-        return Ok(());
-    }
-    diesel::update(users.filter(user_id.eq(userid)))
-        .set(conversation_count.eq(conversation_count + delta))
-        .execute(conn)
-        .expect("Error setting user conversation count");
-    Ok(())
+        .filter(deleted.eq(false))
+        .count()
+        .get_result(conn)
+        .expect("Error finding conversations for counting");
+    Ok(results)
 }
 
 // See if a conversation already exists (by hmac)
@@ -536,9 +507,7 @@ async fn validate_bearer_access_token(token: &str) -> Result<String, TokenError>
 // This endpoint does not perform authentication.
 // Respond with 200 if authenticated, 401 if not
 #[post("/authenticated")]
-async fn authenticated(
-    session: Session,
-) -> actix_web::Result<impl Responder> {
+async fn authenticated(session: Session) -> actix_web::Result<impl Responder> {
     info!("Checking cookie");
     if let Some(session_user_id) = session.get::<String>("user_id")? {
         info!("user_id is {}", session_user_id);
@@ -603,12 +572,33 @@ async fn get_my_conversations(
     Ok(HttpResponse::Ok().json(conversations))
 }
 
+#[get("/conversation/count")]
+async fn get_conversation_count_user(
+    pool: web::Data<DbPool>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    let user_id = match session.get::<String>("user_id")? {
+        Some(session_user_id) => session_user_id,
+        None => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
+    };
+    // Don't block server thread, db stuff is synchronous
+    let count = web::block(move || {
+        let mut conn = pool.get()?;
+        get_conversation_count(&mut conn, &user_id)
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().json(count))
+}
+
 #[derive(Debug)]
 enum LocalError {
     DbConnectionProblem,
     SerializationFailed,
     DbError,
     AuthorizationProblem,
+    NotFound,
+    MaxCount,
 }
 
 impl std::fmt::Display for LocalError {
@@ -618,6 +608,8 @@ impl std::fmt::Display for LocalError {
             LocalError::SerializationFailed => write!(f, "json serialization of contents failed"),
             LocalError::DbError => write!(f, "problem with db connection"),
             LocalError::AuthorizationProblem => write!(f, "authorization problem"),
+            LocalError::NotFound => write!(f, "conversation not found"),
+            LocalError::MaxCount => write!(f, "Maximum free share count reached"),
         }
     }
 }
@@ -635,6 +627,14 @@ impl std::convert::From<DbError> for LocalError {
     fn from(_err: DbError) -> LocalError {
         LocalError::DbError
     }
+}
+
+fn compute_digest(contents: &ConversationContents, metadata: &ConversationMetadata, userid: &String) -> String {
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    contents.hash(&mut h);
+    metadata.hash(&mut h);
+    userid.hash(&mut h);
+    format!("{:#x}", h.finish())
 }
 
 #[post("/conversation/")]
@@ -658,17 +658,15 @@ async fn post_conversation(
         };
         let json_metadata = serde_json::to_string(&meta_data)?;
         let mut conn = pool.get()?;
-        let mut h = std::collections::hash_map::DefaultHasher::new();
-        info!("Hash at start: {:#x}", h.finish());
-        form.contents.hash(&mut h);
-        info!("Hash after contents: {:#x}", h.finish());
-        meta_data.hash(&mut h);
-        info!("Hash after metadata: {:#x}", h.finish());
-        userid.hash(&mut h);
-        info!("Hash after userid: {:#x}", h.finish());
-        let digest = format!("{:#x}", h.finish());
+        let digest = compute_digest(&form.contents, &meta_data, &userid);
         if let Some(uuid) = conversation_exists(&mut conn, &userid, &digest)? {
             return Ok(uuid);
+        }
+        // Check if the user can post more
+        let count = get_conversation_count(&mut conn, &userid)?;
+        let allowed_post = form.paiduser || count < *MAX_FREE_USER_COUNT;
+        if !allowed_post {
+            return Err(LocalError::MaxCount);
         }
         let new_uuid = uuid::Uuid::new_v4().simple().to_string();
         let nc = Conversation {
@@ -701,6 +699,52 @@ fn initialize_db_pool() -> DbPool {
         .expect("database URL should be valid path to Postgres database with username and password")
 }
 
+#[patch("/conversation/{id}")]
+async fn patch_conversation(
+    pool: web::Data<DbPool>,
+    form: web::Json<PatchConversation>,
+    session: Session,
+) -> actix_web::Result<impl Responder> {
+    let userid = match session.get::<String>("user_id")? {
+        Some(session_user_id) => session_user_id,
+        None => return Ok(HttpResponse::Unauthorized().body("Authorization failed")),
+    };
+    web::block(move || -> Result<(), LocalError> {
+        let mut conn = pool.get()?;
+        let conversation = find_conversation_by_id(&mut conn, &form.id, /*deleted=*/ false)?;
+        match conversation {
+            Some(conv) => {
+                if conv.user_id != userid {
+                    info!("Conversation to patch owner does not match requestor");
+                    return Err(LocalError::AuthorizationProblem)
+                }
+                let contents_json = serde_json::to_string(&form.contents)?;
+                let metadata_json = serde_json::to_string(&form.metadata)?;
+                let digest = compute_digest(&form.contents, &form.metadata, &userid);
+                use self::schema::conversations::dsl::*;
+                diesel::update(conversations.filter(id.eq(&form.id)))
+                    .set((
+                        contents.eq(contents_json),
+                        metadata.eq(metadata_json),
+                        public.eq(form.public),
+                        research.eq(form.research),
+                        hmac.eq(digest),
+                    ))
+                    .execute(&mut conn)
+                    .expect("Error patching conversation");
+                Ok(())
+            },
+            None => {
+                info!("Conversation to patch not found");
+                return Err(LocalError::NotFound)
+            }
+        }
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
+    Ok(HttpResponse::Ok().into())
+}
+
 #[post("/conversation/undelete/{id}")]
 async fn undelete_conversation(
     pool: web::Data<DbPool>,
@@ -714,24 +758,23 @@ async fn undelete_conversation(
     };
     web::block(move || -> Result<(), LocalError> {
         let mut conn = pool.get()?;
-        let convo = find_conversation_by_id(&mut conn, &postid, /*deleted=*/ true)?;
-        match convo {
+        let conversation = find_conversation_by_id(&mut conn, &postid, /*deleted=*/ true)?;
+        match conversation {
             Some(conv) => {
                 use self::schema::conversations::dsl::*;
                 if conv.user_id != uid {
                     info!("Conversation to undelete owner does not match requestor");
-                    Err(LocalError::AuthorizationProblem)
-                } else {
-                    diesel::update(conversations.filter(id.eq(postid)))
-                        .set(deleted.eq(false))
-                        .execute(&mut conn)
-                        .expect("Error undeleting conversation");
-                    Ok(())
+                    return Err(LocalError::AuthorizationProblem)
                 }
+                diesel::update(conversations.filter(id.eq(postid)))
+                    .set(deleted.eq(false))
+                    .execute(&mut conn)
+                    .expect("Error undeleting conversation");
+                Ok(())
             }
             _ => {
                 info!("Conversation to undelete not found");
-                Err(LocalError::AuthorizationProblem)
+                return Err(LocalError::AuthorizationProblem)
             }
         }
     })
@@ -834,6 +877,8 @@ async fn main() -> std::io::Result<()> {
             .service(authenticate)
             .service(authenticated)
             .service(logout)
+            .service(get_conversation_count_user)
+            .service(patch_conversation)
     })
     .bind("0.0.0.0:9090")?
     .run()

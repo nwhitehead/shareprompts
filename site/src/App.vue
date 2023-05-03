@@ -243,6 +243,34 @@ async function handleLogout() {
     }
 }
 
+async function handleUpdate(id, field, val) {
+    console.log(`Making ${id} ${field} = ${val}`);
+    const addr = `${SERVER}/conversation/json/${id}?cache=0`;
+    const options = {
+        method: 'GET',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+        },
+    };
+    const response = await fetch(addr, options);
+    const conversation = await response.json();
+    console.log(conversation);
+    conversation[field] = val;
+    const patch_addr = `${SERVER}/api/conversation/${id}`;
+    const patch_options = {
+        method: 'PATCH',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+        },
+        body: JSON.stringify(conversation, null, 2),
+    };
+    const patch_response = await fetch(patch_addr, patch_options);
+    await patch_response.ok;
+    updateConversationsFromServer();
+}
+
 const filteredConversations = computed(() => {
     return conversations.value.filter((item) => !item.deleted || showDeleted.value);
 });
@@ -280,6 +308,9 @@ body {
 .btn-yellow:hover {
     @apply bg-yellow-700;
 }
+.checkmark {
+    @apply rounded py-2 px-2 ml-4 bg-gray-200 hover:bg-gray-300;
+}
 p {
     @apply mb-4;
 }
@@ -305,7 +336,18 @@ span.note {
             </label>
         </div>
 
-        <table v-show="authenticated" class="table p-4 my-4 bg-white rounded-lg shadow">
+        <div v-show="authenticated && filteredConversations.length === 0" 
+            class="bg-white block rounded-lg p-4 shadow">
+            <p>
+                You have no conversations to show.
+            </p>
+            <p>
+                Try clicking on one of your conversations at <a href="https://chat.openai.com" class="text-blue-500 hover:text-blue-700">chat.openai.com</a>
+                and click on the "Share" button.
+            </p>
+        </div>
+
+        <table v-show="authenticated && filteredConversations.length > 0" class="table p-4 my-4 bg-white rounded-lg shadow">
             <thead>
                 <tr>
                     <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
@@ -317,8 +359,13 @@ span.note {
                     <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
                         Status
                     </th>
-                    <th>
+                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                        Public
                     </th>
+                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                        Research
+                    </th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -332,6 +379,14 @@ span.note {
                     <td class="border-b p-4 dark:border-dark-5">
                         <span v-if="!item.deleted" class="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-0.5 text-sm text-green-700">Active</span>
                         <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
+                    </td>
+                    <td>
+                        <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)">✓</button>
+                        <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)">&nbsp;&nbsp;&nbsp;</button>
+                    </td>
+                    <td>
+                        <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)">✓</button>
+                        <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)">&nbsp;&nbsp;&nbsp;</button>
                     </td>
                     <td class="border-b p-4 dark:border-dark-5">
                         <button class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
