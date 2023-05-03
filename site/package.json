@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.7",
+    "extpay": "^3.0.7",
     "vue": "^3.2.47"
   },
   "devDependencies": {

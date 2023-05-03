@@ -4,8 +4,8 @@ import { reactive } from 'vue';
 import { storageBacked } from './storageBacked.js';
 import ExtPay from "extpay";
 
-// const client_id = 'share-conversations';
-// var extpay = ExtPay(client_id);
+const client_id = 'share-conversations';
+var extpay = ExtPay(client_id);
 
 const configuration = storageBacked('config',
     reactive({
@@ -21,6 +21,7 @@ function handleManage() {
 
 function handleUpgrade() {
     console.log('Upgrade');
+    extpay.openPaymentPage();
 }
 
 </script>

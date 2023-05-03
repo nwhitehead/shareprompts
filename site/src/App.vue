@@ -56,14 +56,6 @@ function dateRepresentation(timestamp) {
     return t.fromNow();
 }
 
-function firstLine(conversation) {
-    const dialog = conversation.contents.dialog;
-    if (dialog.length === 0) return null;
-    const line = dialog[0].what;
-    if (line.length <= MAXLENGTH) return line;
-    return line.substring(0, MAXLENGTH);
-}
-
 function link(id) {
     return `${SERVER}/conversation/html/${id}?cache=0`;
 }
@@ -311,9 +303,6 @@ body {
 .checkmark {
     @apply rounded py-2 px-2 ml-4 bg-gray-200 hover:bg-gray-300;
 }
-p {
-    @apply mb-4;
-}
 span.note {
     @apply font-bold;
 }
@@ -325,15 +314,15 @@ span.note {
             Share Conversation
         </h1>
 
-        <div v-show="!authenticated" id="googleButton"></div>
+        <div v-show="!authenticated" id="googleButton" class="my-4"></div>
 
         <template v-if="authenticated">
 
-            <button @click="handleLogout" class="btn-blue">Logout</button>
+            <button @click="handleLogout" class="my-4 btn-blue">Logout</button>
 
-            <div class="mb-4">
+            <div class="mb-4 select-none">
                 <label>
-                    <input type="checkbox" id="showDeleted" v-model="showDeleted" class="mr-2 leading-tight" />
+                    <input type="checkbox" id="showDeleted" v-model="showDeleted" class="my-4 mr-2 leading-tight" />
                     Show deleted conversations.
                 </label>
             </div>
@@ -361,10 +350,10 @@ span.note {
                         <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
                             Status
                         </th>
-                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500" title="Include in public lists">
                             Public
                         </th>
-                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500" title="Allow to be used for artificial intelligence research and development">
                             Research
                         </th>
                         <th></th>
@@ -383,12 +372,12 @@ span.note {
                             <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
                         </td>
                         <td>
-                            <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)">✓</button>
-                            <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)">&nbsp;&nbsp;&nbsp;</button>
+                            <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)" title="Flip">✓</button>
+                            <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
                         <td>
-                            <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)">✓</button>
-                            <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)">&nbsp;&nbsp;&nbsp;</button>
+                            <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)" title="Flip">✓</button>
+                            <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
                         <td class="border-b p-4 dark:border-dark-5">
                             <button class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
@@ -411,14 +400,14 @@ span.note {
                 </tbody>
             </table>
 
-            <p>
+            <p class="my-4">
                 <span class="note">Note</span>: Anyone with a link to a conversation that is not deleted can view the conversation.
             </p>
-            <p v-if="showDeleted">
+            <p v-if="showDeleted" class="my-4">
                 <span class="note">Note</span>: Conversations marked deleted cannot be viewed by anyone. Anyone following
                 a link to a deleted conversation will see an error page. Changes take effect after one minute.
             </p>
-            <p v-if="showDeleted">
+            <p v-if="showDeleted" class="my-4">
                 <span class="note">Note</span>: Conversations marked deleted may be permanently removed from the server 
                 any time after one day of being marked deleted, depending on server storage availability. Once a deleted
                 conversation is permanently removed it cannot be undeleted.
