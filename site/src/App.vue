@@ -327,100 +327,102 @@ span.note {
 
         <div v-show="!authenticated" id="googleButton"></div>
 
-        <button v-show="authenticated" @click="handleLogout" class="btn-blue">Logout</button>
+        <template v-if="authenticated">
 
-        <div class="mb-4" v-show="authenticated">
-            <label>
-                <input type="checkbox" id="showDeleted" v-model="showDeleted" class="mr-2 leading-tight" />
-                Show deleted conversations.
-            </label>
-        </div>
+            <button @click="handleLogout" class="btn-blue">Logout</button>
 
-        <div v-show="authenticated && filteredConversations.length === 0" 
-            class="bg-white block rounded-lg p-4 shadow">
+            <div class="mb-4">
+                <label>
+                    <input type="checkbox" id="showDeleted" v-model="showDeleted" class="mr-2 leading-tight" />
+                    Show deleted conversations.
+                </label>
+            </div>
+
+            <div v-show="authenticated && filteredConversations.length === 0" 
+                class="bg-white block rounded-lg p-4 shadow">
+                <p>
+                    You have no conversations to show.
+                </p>
+                <p>
+                    Try clicking on one of your conversations at <a href="https://chat.openai.com" class="text-blue-500 hover:text-blue-700">chat.openai.com</a>
+                    and click on the "Share" button.
+                </p>
+            </div>
+
+            <table v-show="authenticated && filteredConversations.length > 0" class="table p-4 my-4 bg-white rounded-lg shadow">
+                <thead>
+                    <tr>
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                            Title
+                        </th>
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                            Created
+                        </th>
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                            Status
+                        </th>
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                            Public
+                        </th>
+                        <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
+                            Research
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in filteredConversations" class="text-gray-700">
+                        <td class="border-b p-4 dark:border-dark-5">
+                            <a :href="link(item.id)" target="_blank" class="text-blue-500 hover:text-blue-700">{{ item.metadata.title }}</a>
+                        </td>
+                        <td class="border-b p-4 dark:border-dark-5">
+                            {{ dateRepresentation(item.metadata.creationdate) }}
+                        </td>
+                        <td class="border-b p-4 dark:border-dark-5">
+                            <span v-if="!item.deleted" class="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-0.5 text-sm text-green-700">Active</span>
+                            <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
+                        </td>
+                        <td>
+                            <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)">✓</button>
+                            <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)">&nbsp;&nbsp;&nbsp;</button>
+                        </td>
+                        <td>
+                            <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)">✓</button>
+                            <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)">&nbsp;&nbsp;&nbsp;</button>
+                        </td>
+                        <td class="border-b p-4 dark:border-dark-5">
+                            <button class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
+                            </button>
+                            <button v-if="!item.deleted" class="btn-red" @click="deleteAction(item.id)" title="Delete conversation">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                            </button>
+                            <button v-if="item.deleted" class="btn-yellow" @click="undeleteAction(item.id)" title="Undelete conversation">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
             <p>
-                You have no conversations to show.
+                <span class="note">Note</span>: Anyone with a link to a conversation that is not deleted can view the conversation.
             </p>
-            <p>
-                Try clicking on one of your conversations at <a href="https://chat.openai.com" class="text-blue-500 hover:text-blue-700">chat.openai.com</a>
-                and click on the "Share" button.
+            <p v-if="showDeleted">
+                <span class="note">Note</span>: Conversations marked deleted cannot be viewed by anyone. Anyone following
+                a link to a deleted conversation will see an error page. Changes take effect after one minute.
             </p>
-        </div>
-
-        <table v-show="authenticated && filteredConversations.length > 0" class="table p-4 my-4 bg-white rounded-lg shadow">
-            <thead>
-                <tr>
-                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
-                        Title
-                    </th>
-                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
-                        Created
-                    </th>
-                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
-                        Status
-                    </th>
-                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
-                        Public
-                    </th>
-                    <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500">
-                        Research
-                    </th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in filteredConversations" class="text-gray-700">
-                    <td class="border-b p-4 dark:border-dark-5">
-                        <a :href="link(item.id)" target="_blank" class="text-blue-500 hover:text-blue-700">{{ item.metadata.title }}</a>
-                    </td>
-                    <td class="border-b p-4 dark:border-dark-5">
-                        {{ dateRepresentation(item.metadata.creationdate) }}
-                    </td>
-                    <td class="border-b p-4 dark:border-dark-5">
-                        <span v-if="!item.deleted" class="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-0.5 text-sm text-green-700">Active</span>
-                        <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
-                    </td>
-                    <td>
-                        <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)">✓</button>
-                        <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)">&nbsp;&nbsp;&nbsp;</button>
-                    </td>
-                    <td>
-                        <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)">✓</button>
-                        <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)">&nbsp;&nbsp;&nbsp;</button>
-                    </td>
-                    <td class="border-b p-4 dark:border-dark-5">
-                        <button class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                        </button>
-                        <button v-if="!item.deleted" class="btn-red" @click="deleteAction(item.id)" title="Delete conversation">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                            </svg>
-                        </button>
-                        <button v-if="item.deleted" class="btn-yellow" @click="undeleteAction(item.id)" title="Undelete conversation">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
-                            </svg>
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <p>
-            <span class="note">Note</span>: Anyone with a link to a conversation that is not deleted can view the conversation.
-        </p>
-        <p v-if="showDeleted">
-            <span class="note">Note</span>: Conversations marked deleted cannot be viewed by anyone. Anyone following
-            a link to a deleted conversation will see an error page. Changes take effect after one minute.
-        </p>
-        <p v-if="showDeleted">
-            <span class="note">Note</span>: Conversations marked deleted may be permanently removed from the server 
-            any time after one day of being marked deleted, depending on server storage availability. Once a deleted
-            conversation is permanently removed it cannot be undeleted.
-        </p>
-
+            <p v-if="showDeleted">
+                <span class="note">Note</span>: Conversations marked deleted may be permanently removed from the server 
+                any time after one day of being marked deleted, depending on server storage availability. Once a deleted
+                conversation is permanently removed it cannot be undeleted.
+            </p>
+        </template>
     </div>
 </template>
