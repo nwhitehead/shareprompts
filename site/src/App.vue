@@ -68,9 +68,6 @@ function openai_link(id) {
 /// Generic function to convert JS array into CSV and prompt user to save with filename
 // filename: string
 // rows: [[string]]
-// comments: [[string]]
-// rows and comments are both in same format
-// comments will be prefixed by "# " and ignored by parser.
 function exportCsv(filename, rows) {
     function process(row) {
         let res = '';
@@ -149,7 +146,6 @@ async function deleteAction(id) {
         },
     };
     const response = await fetch(addr, options);
-    console.log('Delete response is', response);
     updateConversationsFromServer();
 }
 
@@ -166,7 +162,6 @@ async function undeleteAction(id) {
         },
     };
     const response = await fetch(addr, options);
-    console.log('undelete response is', response);
     updateConversationsFromServer();
 }
 
@@ -212,7 +207,6 @@ async function updateConversationsFromServer() {
     };
     const response = await fetch(addr, options);
     const jsondata = await response.json();
-    console.log('Conversation data is', jsondata);
     conversations.value = jsondata;
 }
 
@@ -237,7 +231,6 @@ async function handleLogout() {
 }
 
 async function handleUpdate(id, field, val) {
-    console.log(`Making ${id} ${field} = ${val}`);
     const addr = `${SERVER}/conversation/json/${id}?cache=0`;
     const options = {
         method: 'GET',
@@ -248,7 +241,6 @@ async function handleUpdate(id, field, val) {
     };
     const response = await fetch(addr, options);
     const conversation = await response.json();
-    console.log(conversation);
     conversation[field] = val;
     const patch_addr = `${SERVER}/api/conversation/${id}`;
     const patch_options = {
@@ -265,11 +257,9 @@ async function handleUpdate(id, field, val) {
 }
 
 async function handleSetall(field, val) {
-    console.log(`Setting all ${field} = ${val}`);
     for (let i = 0; i < conversations.value.length; i++) {
         let conversation = conversations.value[i];
-        if (conversation[field] !== val) {
-            console.log(`Updating ${conversation.id}`);
+        if (!conversation.deleted && conversation[field] !== val) {
             await handleUpdate(conversation.id, field, val);
         }
     }
@@ -368,7 +358,8 @@ span.note {
                         <th class="border-b-2 p-4 dark:border-dark-5 whitespace-nowrap font-normal text-left uppercase text-gray-500" title="Allow to be used for artificial intelligence research and development">
                             Research
                         </th>
-                        <th></th>
+                        <th class="border-b-2 p-4 dark:border-dark-5">
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -383,27 +374,27 @@ span.note {
                             <span v-if="!item.deleted" class="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-0.5 text-sm text-green-700">Active</span>
                             <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
                         </td>
-                        <td>
+                        <td class="border-b dark:border-dark-5">
                             <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)" title="Flip">✓</button>
                             <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
-                        <td>
+                        <td class="border-b dark:border-dark-5">
                             <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)" title="Flip">✓</button>
                             <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
                         <td class="border-b p-4 dark:border-dark-5">
                             <button class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                 </svg>
                             </button>
                             <button v-if="!item.deleted" class="btn-red" @click="deleteAction(item.id)" title="Delete conversation">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                                 </svg>
                             </button>
                             <button v-if="item.deleted" class="btn-yellow" @click="undeleteAction(item.id)" title="Undelete conversation">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
                                 </svg>
                             </button>
