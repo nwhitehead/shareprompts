@@ -61,6 +61,50 @@ function exportCsv(filename, rows) {
     document.body.removeChild(link);
 }
 
+function conversationToRows(conversation) {
+    const data = conversation;
+    let rows = [];
+    rows.push(['link', link(data.id)]);
+    const date = new Date(data.metadata.creationdate.secs_since_epoch * 1000 + data.metadata.creationdate.nanos_since_epoch * 1e-6).toUTCString();
+    rows.push(['date', date]);
+    rows.push(['title', data.metadata.title]);
+    rows.push(['avatar', data.contents.avatar]);
+    rows.push(['model', data.metadata.model]);
+    rows.push(['openai_link', openai_link(data.metadata.openaiid)]);
+    rows.push(['length', data.metadata.length]);
+    rows.push(['', '']);
+    rows.push(['who', 'what']);
+    for (let i = 0; i < data.contents.dialog.length; i++) {
+        const dialog_row = data.contents.dialog[i];
+        rows.push([dialog_row.who, dialog_row.what]);
+    }
+    return rows;
+}
+
+function conversationsToRows(convos) {
+    if (convos.length < 1) {
+        return [];
+    }
+    // Start with 2 columns from first conversation
+    let rows = conversationToRows(convos[0]);
+    // Now keep appending new column for each conversation
+    for (let i = 1; i < convos.length; i++) {
+        const data = conversationToRows(convos[i]);
+        const end = data.length > rows.length ? data.length : rows.length;
+        for (let j = 0; j < end; j++) {
+            if (j >= rows.length) {
+                rows.push([data[j][0]]);
+            }
+            if (j >= data.length) {
+                rows[j].push('');
+            } else {
+                rows[j].push(data[j][1]);
+            }
+        }
+    }
+    return rows;
+}
+
 async function downloadMarkdown(id) {
     if (!props.authenticated) {
         return;
@@ -75,22 +119,32 @@ async function downloadMarkdown(id) {
     };
     const response = await fetch(addr, options);
     const data = await response.json();
-    let rows = [];
-    rows.push(['link', link(data.id)]);
-    const date = new Date(data.metadata.creationdate.secs_since_epoch * 1000 + data.metadata.creationdate.nanos_since_epoch * 1e-6).toUTCString();
-    rows.push(['date', date]);
-    rows.push(['title', data.metadata.title]);
-    rows.push(['avatar', data.contents.avatar]);
-    rows.push(['model', data.metadata.model]);
-    rows.push(['openai_link', openai_link(data.metadata.openaiid)]);
-    rows.push(['length', data.metadata.length]);
-    rows.push([]);
-    rows.push(['who', 'what']);
-    for (let i = 0; i < data.contents.dialog.length; i++) {
-        const dialog_row = data.contents.dialog[i];
-        rows.push([dialog_row.who, dialog_row.what]);
-    }
+    const rows = conversationToRows(data);
     exportCsv(`conversation-${data.id}.csv`, rows);
+}
+
+async function downloadAllMarkdown(lst) {
+    if (!props.authenticated) {
+        return;
+    }
+    const ids = lst.map((item) => item.id);
+    let convos = [];
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        const addr = `${SERVER}/conversation/json/${id}`;
+        const options = {
+            method: 'GET',
+            headers: {
+                'content-type': 'application/json',
+                'credentials': 'include',
+            },
+        };
+        const response = await fetch(addr, options);
+        const data = await response.json();
+        convos.push(data);
+    }
+    const rows = conversationsToRows(convos);
+    exportCsv('conversations.csv', rows);
 }
 
 async function deleteAction(id) {
@@ -248,17 +302,22 @@ const filteredConversations = computed(() => {
         </tbody>
     </table>
 
-    <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('public', true)">
+    <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('public', true)">
         Set all public
     </button>
-    <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('public', false)">
+    <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('public', false)">
         Clear all public
     </button>
-    <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('research', true)">
+    <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('research', true)">
         Set all research
     </button>
-    <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('research', false)">
+    <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('research', false)">
         Clear all research
+    </button>
+    <button v-if="filteredConversations.length > 0" class="btn-blue flex flex-row mb-2" @click="downloadAllMarkdown(props.conversations.filter((item) => !item.deleted))" title="Download all conversations as CSV">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg> All
     </button>
 
     <p class="my-4">

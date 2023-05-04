@@ -3,6 +3,7 @@
 import { computed, reactive, ref, onMounted, watch } from 'vue';
 import { SERVER, GOOGLE_PROJECT_ID } from './config.js';
 import Manage from './Manage.vue';
+import Hero from './Hero.vue';
 
 const authenticated = ref(null);
 const conversations = reactive([]);
@@ -123,23 +124,31 @@ window.appAuthenticate = (arg) => {
 </script>
 
 <template>
-    <div class="container min-w-[300px] mx-auto p-4">
-        <h1 className="text-2xl font-bold">
-            Share Conversation
-        </h1>
+    <div class="w-full absolute top-0 bg-white">
+        <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16">
+            <a href="/" class="text-2xl font-bold flex flex-row">
+                <img src="logo-128.png" width="32" height="32" class="mr-2">
+                ShareConversation
+            </a>
 
-        <div v-show="!authenticated" id="googleButton" class="my-4"></div>
+            <div v-show="!authenticated" id="googleButton" class="my-4"></div>
 
-        <template v-if="authenticated">
+            <button v-if="authenticated" @click="handleLogout" class="my-4 btn-blue">Logout</button>
+        </div>
+    </div>
 
-            <button @click="handleLogout" class="my-4 btn-blue">Logout</button>
-
+    <div class="container min-w-[300px] xl:max-w-screen-xl mx-auto py-28 p-4">
+        <div>
             <Manage
+                v-if="authenticated"
                 :authenticated="authenticated"
                 :conversations="conversations"
                 @update="updateConversationsFromServer()"
             />
-
-        </template>
+            <Hero
+                v-if="!authenticated"
+            />
+        </div>
     </div>
+
 </template>

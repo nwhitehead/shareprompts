@@ -7,7 +7,10 @@ export default {
     extend: {
         screens: {
             print: {raw: 'print'},
-        }
+        },
+        fontFamily: {
+            'special': ['Lato', 'sans-serif']
+          },
     },
   },
   plugins: [],
