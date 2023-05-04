@@ -264,6 +264,17 @@ async function handleUpdate(id, field, val) {
     updateConversationsFromServer();
 }
 
+async function handleSetall(field, val) {
+    console.log(`Setting all ${field} = ${val}`);
+    for (let i = 0; i < conversations.value.length; i++) {
+        let conversation = conversations.value[i];
+        if (conversation[field] !== val) {
+            console.log(`Updating ${conversation.id}`);
+            await handleUpdate(conversation.id, field, val);
+        }
+    }
+}
+
 const filteredConversations = computed(() => {
     return conversations.value.filter((item) => !item.deleted || showDeleted.value);
 });
@@ -400,6 +411,19 @@ span.note {
                     </tr>
                 </tbody>
             </table>
+
+            <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('public', true)">
+                Set all public
+            </button>
+            <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('public', false)">
+                Clear all public
+            </button>
+            <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('research', true)">
+                Set all research
+            </button>
+            <button v-if="filteredConversations.length > 0" class="btn-yellow" @click="handleSetall('research', false)">
+                Clear all research
+            </button>
 
             <p class="my-4">
                 <span class="note">Note</span>: Anyone with a link to a conversation that is not deleted can view the conversation.
