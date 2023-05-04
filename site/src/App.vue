@@ -1,7 +1,6 @@
 <script setup>
 
 import { computed, reactive, ref, onMounted, watch } from 'vue';
-
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -22,15 +21,17 @@ const GOOGLE_PROJECT_ID = "188075293614-ngf70nb2fe17b0r32l1dhfm0gu17e2of.apps.go
 dayjs.extend(relativeTime);
 
 onMounted(async () => {
-    google.accounts.id.initialize({
-        client_id: GOOGLE_PROJECT_ID,
-        callback: async (response) => {
-            const resp = await authenticateWithServer(response.credential);
-            authenticated.value = await checkIfAuthenticated();
-            if (authenticated.value) {
-                updateConversationsFromServer();
-            }
-        },
+    window.addEventListener("load", () => {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_PROJECT_ID,
+            callback: async (response) => {
+                const resp = await authenticateWithServer(response.credential);
+                authenticated.value = await checkIfAuthenticated();
+                if (authenticated.value) {
+                    updateConversationsFromServer();
+                }
+            },
+        });
     });
     authenticated.value = await checkIfAuthenticated();
     if (authenticated.value) {
