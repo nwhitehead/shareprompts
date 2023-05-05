@@ -175,7 +175,7 @@ window.appAuthenticate = (arg) => {
         </div>
     </div>
 
-    <div class="px-20 pt-15 py-20 text-gray-400 border-t flex flex-col">
+    <div class="px-20 pt-15 py-20 text-gray-400 border-t flex flex-col max-w-screen-xl xl:mx-auto">
         <p class="pr-4">Copyright © 2023, Nathan Whitehead.</p>
         <div class="flex flex-row pt-4">
             <p class="pr-2">Made with</p><div class="grayscale hover:grayscale-0 hover:animate-wiggle">💖</div>

@@ -221,7 +221,7 @@ const filteredConversations = computed(() => {
 </script>
 
 <template>
-    <div class="p-8">
+    <div class="p-8 max-w-screen-xl xl:mx-auto">
         <template v-if="authenticated">
             <div class="mb-4 select-none">
                 <label>
