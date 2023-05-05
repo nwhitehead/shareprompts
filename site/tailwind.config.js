@@ -13,8 +13,8 @@ export default {
         },
         keyframes: {
             wiggle: {
-              '0%, 100%': { transform: 'rotate(-3deg)' },
-              '50%': { transform: 'rotate(3deg)' },
+              '0%, 100%': { transform: 'rotate(-6deg)' },
+              '50%': { transform: 'rotate(6deg)' },
             },
             sparkle: {
                 '0%, 100%': { filter: 'grayscale(0)' },
@@ -22,7 +22,7 @@ export default {
               }
           },
         animation: {
-            wiggle: 'wiggle 3s ease-in-out infinite',
+            wiggle: 'wiggle 1s ease-in-out infinite',
             sparkle: 'sparkle 1s ease-in-out infinite',
         },
     },

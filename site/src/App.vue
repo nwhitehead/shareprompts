@@ -5,6 +5,7 @@ import { SERVER, GOOGLE_PROJECT_ID } from './config.js';
 import Manage from './Manage.vue';
 import Hero from './Hero.vue';
 import NotFound from './NotFound.vue';
+import Privacy from './Privacy.vue';
 
 const authenticated = ref(null);
 const conversations = reactive([]);
@@ -14,7 +15,8 @@ const currentPath = ref(window.location.hash);
 
 const routes = {
   '/': Hero,
-  '/manage': Manage
+  '/manage': Manage,
+  '/privacy': Privacy,
 }
 
 window.addEventListener('hashchange', () => {
@@ -155,6 +157,7 @@ window.appAuthenticate = (arg) => {
                     <span class="hidden md:block">ShareConversation</span>
                 </a>
                 <a href="#/manage" class="px-4">Manage</a>
+                <a href="#/privacy" class="px-4">Privacy</a>
             </div>
 
             <div v-show="!authenticated" id="googleButton" class="my-4"></div>
@@ -175,7 +178,7 @@ window.appAuthenticate = (arg) => {
     <div class="px-20 pt-15 py-20 text-gray-400 border-t flex flex-col">
         <p class="pr-4">Copyright © 2023, Nathan Whitehead.</p>
         <div class="flex flex-row pt-4">
-            <p class="pr-2">Made with</p><div class="grayscale">💖</div>
+            <p class="pr-2">Made with</p><div class="grayscale hover:grayscale-0 hover:animate-wiggle">💖</div>
         </div>
     </div>
 

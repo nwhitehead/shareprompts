@@ -64,6 +64,12 @@
     <div class="p-4 container mx-auto text-black/50 text-xs md:max-w-3xl">
         <p>{{ model }}</p>
         <p>This conversation was recorded from <a href="https://chat.openai.com/">https://chat.openai.com/</a> on {{ timestamp }}.</p>
+        {{#if public}}
+        <p>This conversation may be listed in public directories.</p>
+        {{/if}}
+        {{#if research}}
+        <p>This conversation may be used for AI research and development purposes.</p>
+        {{/if}}
         <p><a href="/">ShareConversation</a> has no affiliation with OpenAI or ChatGPT.</p>
     </div>
 </div>

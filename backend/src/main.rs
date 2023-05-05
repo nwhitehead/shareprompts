@@ -417,6 +417,8 @@ async fn get_conversation_html(
                         "chatgpt_uri": chatgpt_uri,
                         "timestamp": timestamp_str,
                         "hmac": &conv.hmac,
+                        "public": &conv.public,
+                        "research": &conv.research,
                     }),
                 )
                 .map_err(error::ErrorInternalServerError)?;
