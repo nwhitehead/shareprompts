@@ -10,7 +10,10 @@ async function handle_message(request, _sender, sendResponse) {
         var extpay = ExtPay(client_id);
         const user = await extpay.getUser();
         const token = await chrome.identity.getAuthToken({interactive: true});
-        const dict = await chrome.storage.sync.get('config');
+        let dict = await chrome.storage.sync.get('config');
+        if (dict.config === undefined) {
+            dict = {'config': '{"avatar":true,"public":true,"research":true}'};
+        }
         dict.token = token.token;
         dict.paid = user.paid;
         console.log('Sending config', dict);
