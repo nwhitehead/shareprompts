@@ -4,11 +4,26 @@ import { computed, reactive, ref, onMounted, watch } from 'vue';
 import { SERVER, GOOGLE_PROJECT_ID } from './config.js';
 import Manage from './Manage.vue';
 import Hero from './Hero.vue';
+import NotFound from './NotFound.vue';
 
 const authenticated = ref(null);
 const conversations = reactive([]);
 const MAXLENGTH = 200;
 let gis_initialized = false;
+const currentPath = ref(window.location.hash);
+
+const routes = {
+  '/': Hero,
+  '/manage': Manage
+}
+
+window.addEventListener('hashchange', () => {
+  currentPath.value = window.location.hash
+});
+
+const currentView = computed(() => {
+  return routes[currentPath.value.slice(1) || '/'] || NotFound;
+});
 
 onMounted(async () => {
     window.addEventListener("load", () => {
@@ -125,11 +140,14 @@ window.appAuthenticate = (arg) => {
 
 <template>
     <div class="w-full absolute top-0 bg-white">
-        <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16">
-            <a href="/" class="text-2xl font-bold flex flex-row">
-                <img src="/logo-128.png" width="32" height="32" class="mr-2">
-                ShareConversation
-            </a>
+        <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16 min-w-[350px]">
+            <div class="flex flex-row items-center">
+                <a href="/" class="text-2xl font-bold flex flex-row px-4">
+                    <img src="/logo-128.png" width="32" height="32" class="mr-2">
+                    <span class="hidden md:block">ShareConversation</span>
+                </a>
+                <a href="#/manage" class="px-4">Manage</a>
+            </div>
 
             <div v-show="!authenticated" id="googleButton" class="my-4"></div>
 
@@ -139,15 +157,10 @@ window.appAuthenticate = (arg) => {
 
     <div class="container min-w-[300px] xl:max-w-screen-xl mx-auto py-28 p-4">
         <div>
-            <Manage
-                v-if="authenticated"
+            <component :is="currentView"
                 :authenticated="authenticated"
                 :conversations="conversations"
-                @update="updateConversationsFromServer()"
-            />
-            <Hero
-                v-if="!authenticated"
-            />
+                @update="updateConversationsFromServer()" />
         </div>
     </div>
 

@@ -14,5 +14,17 @@
                 Share your ChatGPT conversations with one click.
             </p>
         </div>
+        <div class="my-8">
+            <p class="my-8 text-lg text-gray-800">
+                <ul>
+                    <li>Shared conversations have permanent URL addresses that won't change</li>
+                    <li>Printing works with reasonable formatting</li>
+                    <li>Includes avatar image (optional)</li>
+                    <li>Delete and manage existing conversations</li>
+                    <li>Export conversations as CSV files</li>
+                    <li>Explicit (optional) consent to use shared conversations for AI research and training</li>
+                </ul>
+            </p>
+        </div>
     </div>
 </template>
