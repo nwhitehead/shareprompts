@@ -17,7 +17,7 @@ const configuration = storageBacked('config',
 );
 
 function handleManage() {
-    window.open('https://shareconversation.com', '_blank');
+    window.open('https://shareconversation.com/#/manage', '_blank');
 }
 
 function handleUpgrade() {
