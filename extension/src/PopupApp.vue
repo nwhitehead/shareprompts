@@ -1,11 +1,12 @@
 <script setup>
 
-import { reactive } from 'vue';
+import { onMounted, ref, reactive } from 'vue';
 import { storageBacked } from './storageBacked.js';
 import ExtPay from "extpay";
 
+let paid = ref(null);
 const client_id = 'share-conversations';
-var extpay = ExtPay(client_id);
+let extpay = ExtPay(client_id);
 
 const configuration = storageBacked('config',
     reactive({
@@ -24,6 +25,13 @@ function handleUpgrade() {
     extpay.openPaymentPage();
 }
 
+onMounted(async () => {
+    if (paid.value === null) {
+        const user = await extpay.getUser();
+        paid.value = user.paid;
+    }
+});
+
 </script>
 
 <style>
@@ -35,6 +43,12 @@ function handleUpgrade() {
 }
 .btn-blue:hover {
     @apply bg-blue-700;
+}
+.btn-green {
+    @apply btn bg-green-500 text-white;
+}
+.btn-green:hover {
+    @apply bg-green-700;
 }
 span.note {
     @apply font-bold;
@@ -70,8 +84,7 @@ span.note {
         </fieldset>
 
         <p class="mt-4 mb-4">
-            <span class="note">Note</span>: These options apply to new shared conversations. To change settings for existing
-            shared conversations click "Manage my conversations" below.
+            <span class="note">Note</span>: These options only apply to new shared conversations.
         </p>
         <p class="mb-4">
             <span class="note">Note</span>: Anyone that has the link to a conversation can see it. The "public" option includes the
@@ -85,7 +98,7 @@ span.note {
             any archived copies that others have saved while the conversation was shared.
         </p>
 
-        <button @click="handleManage" class="btn-blue">Manage my conversations</button>
-        <button @click="handleUpgrade" class="btn-blue">Upgrade</button>
+        <button @click="handleManage" class="btn-blue mr-2">Manage conversations</button>
+        <button v-if="paid === false" @click="handleUpgrade" class="btn-green">Upgrade</button>
     </div>
 </template>

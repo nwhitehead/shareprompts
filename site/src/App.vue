@@ -127,7 +127,7 @@ window.appAuthenticate = (arg) => {
     <div class="w-full absolute top-0 bg-white">
         <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16">
             <a href="/" class="text-2xl font-bold flex flex-row">
-                <img src="logo-128.png" width="32" height="32" class="mr-2">
+                <img src="/logo-128.png" width="32" height="32" class="mr-2">
                 ShareConversation
             </a>
 

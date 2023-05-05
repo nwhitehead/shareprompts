@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "ShareConversations",
+    "name": "ShareConversation",
     "description": "Share your ChatGPT conversations",
-    "version": "1.01",
+    "version": "1.2",
     "action": {
         "default_popup": "dist/popup.html",
         "default_icon": "images/logo-128.png"
