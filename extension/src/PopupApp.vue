@@ -58,7 +58,7 @@ span.note {
 <template>
     <div class="container min-w-[300px] mx-auto p-4 bg-white">
         <h1 className="text-2xl font-bold">
-            Share Conversation
+            ShareConversation
         </h1>
 
         <fieldset class="border border-solid border-stone-300 p-3 mt-4">
