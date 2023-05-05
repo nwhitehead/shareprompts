@@ -53,7 +53,7 @@
                         <p>{{ this.what }}</p>
                     {{/if}}
                     {{#if (string_equal "gpt" this.who)}}
-                        <div class="markdown whitespace-normal">{{ this.what }}</div>
+                        <div class="markdown whitespace-normal">{{{ (markdown this.what) }}}</div>
                     {{/if}}
                 </div>
             </div>

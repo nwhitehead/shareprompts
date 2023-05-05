@@ -46,6 +46,9 @@ pre code::before {
 pre code::after {
     content: '' !important;
 }
+pre {
+    @apply mb-4;
+}
 .hljs {
     @apply bg-black rounded-b-md p-0;
 }

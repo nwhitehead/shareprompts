@@ -12,7 +12,6 @@
         "tailwindcss": "^3.3.1"
     },
     "dependencies": {
-        "highlight.js": "^11.7.0",
-        "marked": "^4.3.0"
+        "highlight.js": "^11.7.0"
     }
 }

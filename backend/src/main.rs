@@ -51,14 +51,22 @@ lazy_static! {
         .expect("MAX_FREE_USER_COUNT should be set")
         .parse()
         .expect("Cound not parse MAX_FREE_USER_COUNT");
+    static ref MARKDOWN_OPTIONS: pulldown_cmark::Options = {
+        let mut options = pulldown_cmark::Options::empty();
+        options.insert(pulldown_cmark::Options::ENABLE_TABLES);
+        options.insert(pulldown_cmark::Options::ENABLE_FOOTNOTES);
+        options.insert(pulldown_cmark::Options::ENABLE_STRIKETHROUGH);
+        options.insert(pulldown_cmark::Options::ENABLE_TASKLISTS);
+        options
+    };
 }
 
 // Google keys
 #[derive(Debug, Deserialize)]
 struct JsonWebKey {
-    r#use: String,
+    r#_use: String,
     kid: String,
-    alg: String,
+    _alg: String,
     n: String,
     e: String,
 }
@@ -90,6 +98,17 @@ struct Claims {
 
 // Check for string equality
 handlebars_helper!(string_equal: |*args| args[0] == args[1]);
+// Handle markdown
+handlebars_helper!(markdown: |*args| {
+    let txt = match args[0] {
+        serde_json::Value::String(s) => s,
+        _ => "Invalid JSON value for markdown string",
+    };
+    let parser = pulldown_cmark::Parser::new_ext(&txt, *MARKDOWN_OPTIONS);
+    let mut html_output = String::new();
+    pulldown_cmark::html::push_html(&mut html_output, parser);
+    html_output
+});
 
 // Model for conversations in the database with all fields
 #[derive(Debug, Clone, Queryable, Insertable)]
@@ -377,6 +396,7 @@ async fn get_conversation_html(
         Some(conv) => {
             let mut reg = Handlebars::new();
             reg.register_helper("string_equal", Box::new(string_equal));
+            reg.register_helper("markdown", Box::new(markdown));
             let contents: ConversationContents = serde_json::from_str(&conv.contents)?;
             let metadata: ConversationMetadata = serde_json::from_str(&conv.metadata)?;
             let chatgpt_uri: String =

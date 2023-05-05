@@ -1,4 +1,3 @@
-import { marked } from 'marked';
 import hljs from 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/es/highlight.min.js';
 
 function handleClick() {
@@ -24,13 +23,6 @@ function handleCopy() {
 window.handleCopy = handleCopy;
 
 window.addEventListener("DOMContentLoaded", (event) => {
-    // Get everything in .markdown class, interpret as markdown and update DOM
-    const markdown = document.querySelectorAll('.markdown');
-    for (let i = 0; i < markdown.length; i++) {
-        const node = markdown[i];
-        const src = node.innerHTML;
-        node.innerHTML = marked.parse(src);
-    }
     // Look for pre code sections, highlight
     hljs.highlightAll();
     // Update pre code sections with detected language text
