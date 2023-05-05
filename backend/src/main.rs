@@ -64,9 +64,9 @@ lazy_static! {
 // Google keys
 #[derive(Debug, Deserialize)]
 struct JsonWebKey {
-    r#_use: String,
+    r#use: String,
     kid: String,
-    _alg: String,
+    alg: String,
     n: String,
     e: String,
 }

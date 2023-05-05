@@ -155,7 +155,7 @@ window.appAuthenticate = (arg) => {
         </div>
     </div>
 
-    <div class="container min-w-[300px] xl:max-w-screen-xl mx-auto py-28 p-4">
+    <div class="min-w-[300px] pt-16 w-screen">
         <div>
             <component :is="currentView"
                 :authenticated="authenticated"
