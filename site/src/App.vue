@@ -138,6 +138,14 @@ window.appAuthenticate = (arg) => {
 
 </script>
 
+<style>
+@keyframes sparkle {
+    0% { filter: grayscale(100%); }
+    50% { filter: grayscale(100%); }
+    100% { filter: grayscale(0); }
+}
+</style>
+
 <template>
     <div class="w-full absolute top-0 bg-white">
         <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16 min-w-[350px]">
@@ -155,12 +163,19 @@ window.appAuthenticate = (arg) => {
         </div>
     </div>
 
-    <div class="min-w-[300px] pt-16 w-screen">
+    <div class="min-w-[300px] pt-16 w-full">
         <div>
             <component :is="currentView"
                 :authenticated="authenticated"
                 :conversations="conversations"
                 @update="updateConversationsFromServer()" />
+        </div>
+    </div>
+
+    <div class="px-20 pt-15 py-20 text-gray-400 border-t flex flex-col">
+        <p class="pr-4">Copyright © 2023, Nathan Whitehead.</p>
+        <div class="flex flex-row pt-4">
+            <p class="pr-2">Made with</p><div class="grayscale">💖</div>
         </div>
     </div>
 
