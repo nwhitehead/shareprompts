@@ -13,12 +13,17 @@ export default {
         },
         keyframes: {
             wiggle: {
-              '0%, 100%': { transform: 'rotate(-30deg)' },
-              '50%': { transform: 'rotate(30deg)' },
-            }
-        },
+              '0%, 100%': { transform: 'rotate(-3deg)' },
+              '50%': { transform: 'rotate(3deg)' },
+            },
+            sparkle: {
+                '0%, 100%': { filter: 'grayscale(0)' },
+                '90%': { filter: 'grayscale(100%)' },
+              }
+          },
         animation: {
-            wiggle: 'wiggle 1s ease-in-out infinite',
+            wiggle: 'wiggle 3s ease-in-out infinite',
+            sparkle: 'sparkle 1s ease-in-out infinite',
         },
     },
   },
