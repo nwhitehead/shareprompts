@@ -223,6 +223,7 @@ const filteredConversations = computed(() => {
 <template>
     <div class="p-8 max-w-screen-xl xl:mx-auto">
         <template v-if="authenticated">
+            <h1 class="text-2xl py-4">Your shared conversations</h1>
             <div class="mb-4 select-none">
                 <label>
                     <input type="checkbox" id="showDeleted" v-model="showDeleted" class="my-4 mr-2 leading-tight" />
@@ -236,7 +237,7 @@ const filteredConversations = computed(() => {
                     You have no conversations to show.
                 </p>
                 <p>
-                    Try clicking on one of your conversations at <a href="https://chat.openai.com" class="text-blue-500 hover:text-blue-700">chat.openai.com</a>
+                    Try clicking on one of your conversations at <a href="https://chat.openai.com" class="text-blue-700 hover:text-blue-500">chat.openai.com</a>
                     and click on the "Share" button.
                 </p>
             </div>
@@ -266,7 +267,7 @@ const filteredConversations = computed(() => {
                 <tbody>
                     <tr v-for="item in filteredConversations" class="text-gray-700">
                         <td class="border-b p-4 dark:border-dark-5">
-                            <a :href="link(item.id)" target="_blank" class="text-blue-500 hover:text-blue-700">{{ item.metadata.title }}</a>
+                            <a :href="link(item.id)" target="_blank" class="text-blue-700 hover:text-blue-500">{{ item.metadata.title }}</a>
                         </td>
                         <td class="border-b p-4 dark:border-dark-5">
                             {{ dateRepresentation(item.metadata.creationdate) }}
