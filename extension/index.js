@@ -9,6 +9,7 @@ async function handleClick(button) {
 
     const msg = await chrome.runtime.sendMessage({type: "get_configuration"});
     const config = JSON.parse(msg.config);
+    const paiduser = msg.paid;
     const token = msg.token;
 
     button.textContent = "Sharing (copying)...";
@@ -68,7 +69,7 @@ async function handleClick(button) {
         public: config.public,
         research: config.research,
         contents: conversationData,
-        paiduser: true,
+        paiduser,
     };
     const options = {
         method: 'POST',

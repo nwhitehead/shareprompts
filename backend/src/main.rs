@@ -687,6 +687,7 @@ async fn post_conversation(
         // Check if the user can post more
         let count = get_conversation_count(&mut conn, &userid)?;
         let allowed_post = form.paiduser || count < *MAX_FREE_USER_COUNT;
+        info!("{} {} {} {}", form.paiduser, count, *MAX_FREE_USER_COUNT, allowed_post);
         if !allowed_post {
             return Err(LocalError::MaxCount);
         }

@@ -51,6 +51,16 @@ JWKS (JSON Web Key Set) format at:
 The server caches them and uses cached values. The server grabs the keys every
 few hours whatever the cache control headers say.
 
+## Zip up extension
+
+Need to do a build step:
+
+    cd extension
+    npm run build
+    cd ..
+    zip -r extension.zip extension/manifest.json extension/dist/* extension/images/*
+
+
 ## Currently working on
 
 * User conversation counts, for free/paid check
