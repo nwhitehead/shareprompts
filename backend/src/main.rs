@@ -669,7 +669,7 @@ async fn post_conversation(
         Ok(resok) => resok,
         Err(_) => return Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
     };
-    let convo_id = web::block(move || -> Result<String, LocalError> {
+    match web::block(move || -> Result<String, LocalError> {
         let json_contents = serde_json::to_string(&form.contents)?;
         let meta_data = ConversationMetadata {
             title: form.title.clone(),
@@ -709,9 +709,12 @@ async fn post_conversation(
             .expect("Error saving new conversation");
         Ok(new_uuid)
     })
-    .await?
-    .map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Created().json(convo_id))
+    .await? {
+        Ok(inner_convo_id) => Ok(HttpResponse::Created().json(inner_convo_id)),
+        Err(LocalError::AuthorizationProblem) => Ok(HttpResponse::Unauthorized().body("Token authorization failed")),
+        Err(LocalError::MaxCount) => Ok(HttpResponse::Forbidden().body("Maximum free sharing count reached")),
+        Err(_) => Ok(HttpResponse::InternalServerError().body("Something went wrong on the server")),
+    }
 }
 
 fn initialize_db_pool() -> DbPool {

@@ -80,14 +80,22 @@ async function handleClick(button) {
         },
         body: JSON.stringify(data, null, 2),
     };
-    const response = await fetch(addr, options);
-    const jsondata = await response.json();
-    // Go to new tab with fresh convo
-    const url = `https://shareconversation.com/conversation/html/${jsondata}`;
+    try {
+        const response = await fetch(addr, options);
+        if (response.ok) {
+            const jsondata = await response.json();
+            // Go to new tab with fresh convo
+            const url = `https://shareconversation.com/conversation/html/${jsondata}`;
+            window.open(url, '_blank').focus();
+        } else {
+            console.log('Unsuccessful', response);
+        }
+    } catch(error) {
+        console.log('There was an error', error);
+    }
     button.innerHTML = shareButtonContent;
     button.style.cursor = "pointer";
     button.disabled = false;
-    window.open(url, '_blank').focus();
 }
 
 function addButton() {
