@@ -1,10 +1,11 @@
 {
     "manifest_version": 3,
     "name": "ShareConversation",
+    "minimum_chrome_version": "93",
     "description": "Share your ChatGPT conversations",
     "version": "1.3",
     "action": {
-        "default_popup": "dist/popup.html",
+        "default_popup": "popup.html",
         "default_icon": "images/logo-128.png"
     },
     "icons": {
@@ -16,12 +17,12 @@
     "content_scripts": [
         {
           "matches": ["https://chat.openai.com/*"],
-          "js": ["dist/index.js"],
+          "js": ["index.js"],
           "run_at": "document_end"
         }
     ],
     "background": {
-        "service_worker": "dist/background.js",
+        "service_worker": "background.js",
         "type": "module"
     },
     "permissions": [

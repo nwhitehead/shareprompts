@@ -1,7 +1,6 @@
-// import ExtPay from "extpay";
-
-// const client_id = 'share-conversations';
-// var extpay = ExtPay(client_id);
+import ExtPay from "extpay";
+const client_id = 'share-conversations';
+let extpay = ExtPay(client_id);
 
 const shareButtonContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="5mm" height="5mm" version="1.1" viewBox="0 0 9.0162 8.8533" xmlns="http://www.w3.org/2000/svg">
@@ -95,12 +94,11 @@ async function handleClick(button) {
         } else {
             if (response.status === 403 && !paiduser) {
                 // Reached free limit
+                extpay.openPaymentPage();
             }
-
-            console.log('Unsuccessful', response);
         }
     } catch(error) {
-        console.log('There was an error', error);
+        console.log('There was an error during sharing', error);
     }
     button.innerHTML = shareButtonContent;
     button.style.cursor = "pointer";

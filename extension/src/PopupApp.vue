@@ -21,7 +21,6 @@ function handleManage() {
 }
 
 function handleUpgrade() {
-    console.log('Upgrade');
     extpay.openPaymentPage();
 }
 

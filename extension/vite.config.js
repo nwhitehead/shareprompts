@@ -1,21 +1,14 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import { crx } from '@crxjs/vite-plugin'
+import manifest from './manifest.json' assert { type: 'json' } // Node >=17
 import vue from '@vitejs/plugin-vue';
 
 // https://vitejs.dev/config/
 export default defineConfig({
     base: "",
-    plugins: [vue()],
-    build: {
-        rollupOptions: {
-            input: {
-                popup: resolve(__dirname, 'popup.html'),
-                index: resolve(__dirname, 'index.js'),
-                background: resolve(__dirname, 'background.js'),
-            },
-            output: {
-                entryFileNames: '[name].js',
-            }
-        }
-    }
+    plugins: [
+        vue(),
+        crx({ manifest })
+    ],
 })
