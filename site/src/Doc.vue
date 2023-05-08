@@ -160,10 +160,15 @@
                 popup. Then click the <img src="../images/upgrade.png"
                 class="inline mx-2 rounded" /> button in the extension popup.
                 For a one-time fee you can become a <span class="font-bold
-                italic shadow-lg">lifetime premium</span> member. You'll unlock
+                italic shadow-lg shadow-yellow-500/50">lifetime premium</span> member. You'll unlock
                 the features described here and get access to new future
                 features for premium members as they become available at no
                 extra cost.
+            </p>
+            <p>
+                Once you've upgraded, your account is synced with any computer and location where you use Chrome. If for any reason you need to
+                manually login again, just click the same <img src="../images/upgrade.png" class="inline mx-2 rounded" /> button. From
+                the payment popup window click the "Already paid? Log in" link.
             </p>
         </div>
 </template>
