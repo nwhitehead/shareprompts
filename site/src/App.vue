@@ -161,7 +161,7 @@ window.appAuthenticate = (arg) => {
                     <span class="hidden md:block">ShareConversation</span>
                 </a>
                 <a href="#/manage" class="px-4">Manage</a>
-                <a href="#/doc" class="px-4">Documentation</a>
+                <a href="#/doc" class="px-4">Docs</a>
                 <a href="#/support" class="px-4">Support</a>
                 <a href="#/privacy" class="px-4">Privacy</a>
             </div>

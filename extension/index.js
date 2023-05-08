@@ -1,3 +1,8 @@
+// import ExtPay from "extpay";
+
+// const client_id = 'share-conversations';
+// var extpay = ExtPay(client_id);
+
 const shareButtonContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="5mm" height="5mm" version="1.1" viewBox="0 0 9.0162 8.8533" xmlns="http://www.w3.org/2000/svg">
 <g transform="translate(-4.3461 -4.7617)">
@@ -88,6 +93,10 @@ async function handleClick(button) {
             const url = `https://shareconversation.com/conversation/html/${jsondata}`;
             window.open(url, '_blank').focus();
         } else {
+            if (response.status === 403 && !paiduser) {
+                // Reached free limit
+            }
+
             console.log('Unsuccessful', response);
         }
     } catch(error) {

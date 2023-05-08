@@ -56,10 +56,9 @@ few hours whatever the cache control headers say.
 Need to do a build step:
 
     cd extension
-    npm run build
-    cd ..
-    zip -r extension.zip extension/manifest.json extension/dist/* extension/images/*
+    npm run package
 
+That produces the `extension.zip` for uploading to Chrome.
 
 ## Currently working on
 

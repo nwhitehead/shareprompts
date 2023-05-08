@@ -119,6 +119,12 @@
 
         <div class="my-8">
             <p>
+                
+            </p>
+        </div>
+
+        <div class="my-8">
+            <p>
                 <a href="https://github.com/nwhitehead/shareprompts" class="text-blue-700 hover:text-blue-500">View source on GitHub</a>
             </p>
         </div>
