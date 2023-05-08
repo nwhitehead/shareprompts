@@ -32,11 +32,5 @@
     "oauth2": {
         "client_id": "188075293614-ufu933v3duhro6d8hp1t2pnvc3evkcbq.apps.googleusercontent.com",
         "scopes": ["openid"]
-    },
-    "externally_connectable": {
-        "matches": [
-            "https://shareconversation.com/*",
-            "http://localhost/*"
-        ]
     }
 }

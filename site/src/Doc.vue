@@ -1,15 +1,5 @@
 <script setup>
 
-// The ID of the extension we want to talk to.
-var editorExtensionId = "mmjckpijidoldpmailjmfnkbfngnfmhn";
-
-// Make a simple request:
-chrome.runtime.sendMessage(editorExtensionId, {type: 'get_configuration'},
-    function(response) {
-        console.log('response', response);
-    }
-);
-
 </script>
 
 <template>
@@ -50,7 +40,12 @@ chrome.runtime.sendMessage(editorExtensionId, {type: 'get_configuration'},
             </h2>
             <p class="mt-4 text-base">
                 Once the extension is installed, click the Chrome extension puzzle piece <img src="../images/puzzle.png" class="inline mx-2 rounded" />
-                and then the ShareConversation extension. This will open up a popup window with options for the extension. (You can also pin the extension
+                and then the 
+                <span class="rounded">
+                    <img src="../images/logo-128.png" width="16" height="16" class="inline mx-1" />
+                    ShareConversation
+                </span>
+                extension. This will open up a popup window with options for the extension. (You can also pin the extension
                 to keep it visible without clicking on the puzzle piece).
             </p>
             <figure class="max-w-lg my-4 mx-auto">
@@ -112,7 +107,7 @@ chrome.runtime.sendMessage(editorExtensionId, {type: 'get_configuration'},
             <figure class="max-w-lg my-4 mx-auto">
                 <img src="../images/manage.png" class="h-auto max-w-full border shadow" />
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Your conversations can be managed here at the
-                <a href="/#/manage">ShareConversation.com</a> website.</figcaption>
+                <a href="/#/manage" class="text-blue-700 hover:text-blue-500">ShareConversation.com</a> website.</figcaption>
             </figure>
             <p class="mt-4 text-base">
                 If you share a conversation and then decide you want to change
@@ -137,7 +132,7 @@ chrome.runtime.sendMessage(editorExtensionId, {type: 'get_configuration'},
             </h2>
             <p class="mt-4 text-base">
                 If you share the same conversation multiple times you will get the same address each time. If the conversation changes and you share again, the
-                extension will create a new shared conversation with the updated dialog. Old shared conversations will not change. The motivation here is
+                extension will create a new shared conversation with the updated contents. Old shared conversations will not change. The motivation here is
                 that links to shared conversations should be permanent.
             </p>
 
@@ -146,16 +141,29 @@ chrome.runtime.sendMessage(editorExtensionId, {type: 'get_configuration'},
             </h2>
             <p class="mt-4 text-base">
                 Free users have a limit on shared conversations. Once you reach your limit you need to upgrade your account or delete existing
-                conversations. Paid users have NO LIMIT to number of conversations shared.
+                conversations. Paid users have NO LIMIT to number of conversations shared. If you try to share too many conversations, the extension
+                will open the upgrade popup to prompt you to upgrade your account.
             </p>
             <p class="mt-4 text-base">
                 Paid users also unlock bulk download functionality. Paid users can download all their conversations in CSV format for use in
                 spreadsheets, or in JSON format for use in other programs.
             </p>
             <p class="mt-4 text-base">
-                To upgrade your account, click the <img src="../images/upgrade.png" class="inline mx-2 rounded" /> button. For a one-time fee
-                you can become a <span class="font-bold italic">lifetime premium</span> member. You'll unlock the features described here and get access to
-                new future features for premium members as they become available. The lifetime membership price may increase over time.
+                To upgrade your account, click the Chrome extension puzzle piece
+                <img src="../images/puzzle.png" class="inline mx-2 rounded" />
+                and then the 
+                <span class="rounded">
+                    <img src="../images/logo-128.png" width="16" height="16" class="inline mx-1" />
+                    ShareConversation
+                </span>
+                extension to get the options
+                popup. Then click the <img src="../images/upgrade.png"
+                class="inline mx-2 rounded" /> button in the extension popup.
+                For a one-time fee you can become a <span class="font-bold
+                italic shadow-lg">lifetime premium</span> member. You'll unlock
+                the features described here and get access to new future
+                features for premium members as they become available at no
+                extra cost.
             </p>
         </div>
 </template>
