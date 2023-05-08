@@ -20,6 +20,12 @@
         src: ../backend/site/chatgpt.png
         dest: /app/shareprompts/site/chatgpt.png
       notify: Restart shareprompts-backend-api
+    - name: Synchronize backend site files
+      synchronize:
+        copy_links: true
+        src: ../backend/site/logo-128.png
+        dest: /app/shareprompts/site/logo-128.png
+      notify: Restart shareprompts-backend-api
     - name: Synchronize backend executable files
       synchronize:
         src: ../backend/target/release/shareprompts-backend-api

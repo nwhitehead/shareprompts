@@ -46,6 +46,8 @@ lazy_static! {
         std::fs::read_to_string("./site/index.css").expect("Read INDEX_CSS");
     static ref CHATGPT_PNG: Vec<u8> =
         std::fs::read("./site/chatgpt.png").expect("Read CHATGPT_PNG");
+    static ref LOGO_PNG: Vec<u8> =
+        std::fs::read("./site/logo-128.png").expect("Read LOGO_PNG");
     static ref MAIN_JS: String = std::fs::read_to_string("./site/main.js").expect("Read MAIN_JS");
     static ref MAX_FREE_USER_COUNT: i64 = std::env::var("MAX_FREE_USER_COUNT")
         .expect("MAX_FREE_USER_COUNT should be set")
@@ -401,6 +403,8 @@ async fn get_conversation_html(
             let metadata: ConversationMetadata = serde_json::from_str(&conv.metadata)?;
             let chatgpt_uri: String =
                 format!("data:image/png;base64,{}", base64::encode(&*CHATGPT_PNG));
+            let logo_uri: String =
+                format!("data:image/png;base64,{}", base64::encode(&*LOGO_PNG));
             let timestamp: DateTime<Utc> = metadata.creationdate.into();
             let timestamp_str: String = format!("{}", timestamp.format("%Y/%m/%d %T UTC"));
             let body = reg
@@ -415,6 +419,7 @@ async fn get_conversation_html(
                         "avatar": contents.avatar,
                         "dialog": contents.dialog,
                         "chatgpt_uri": chatgpt_uri,
+                        "logo_uri": logo_uri,
                         "timestamp": timestamp_str,
                         "hmac": &conv.hmac,
                         "public": &conv.public,

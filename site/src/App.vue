@@ -7,6 +7,7 @@ import Hero from './Hero.vue';
 import NotFound from './NotFound.vue';
 import Privacy from './Privacy.vue';
 import Support from './Support.vue';
+import Doc from './Doc.vue';
 
 const authenticated = ref(null);
 const conversations = reactive([]);
@@ -17,8 +18,9 @@ const currentPath = ref(window.location.hash);
 const routes = {
   '/': Hero,
   '/manage': Manage,
-  '/privacy': Privacy,
+  '/doc': Doc,
   '/support': Support,
+  '/privacy': Privacy,
 }
 
 window.addEventListener('hashchange', () => {
@@ -155,12 +157,13 @@ window.appAuthenticate = (arg) => {
         <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16 min-w-[350px]">
             <div class="flex flex-row items-center">
                 <a href="/" class="text-2xl font-bold flex flex-row px-4">
-                    <img src="/logo-128.png" width="32" height="32" class="mr-2">
+                    <img src="/images/logo-128.png" width="32" height="32" class="mr-2">
                     <span class="hidden md:block">ShareConversation</span>
                 </a>
                 <a href="#/manage" class="px-4">Manage</a>
-                <a href="#/privacy" class="px-4">Privacy</a>
+                <a href="#/doc" class="px-4">Documentation</a>
                 <a href="#/support" class="px-4">Support</a>
+                <a href="#/privacy" class="px-4">Privacy</a>
             </div>
 
             <div v-show="!authenticated" id="googleButton" class="my-4"></div>

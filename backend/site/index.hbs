@@ -3,8 +3,7 @@
 <head>
     <title>ShareConversation - {{ title }}</title>
     <meta property="og:title" content="{{ title }}">
-    <meta property="og:image" content="https://shareconversation.com/logo-128.png">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.7.0/build/styles/stackoverflow-dark.min.css">
+    <meta property="og:image" content="{{ logo_uri }}">
 <style>
 {{{ style }}}
 </style>
@@ -76,7 +75,7 @@
 
 <div class="print:hidden z-10 fixed bottom-5 inset-x-0 mx-auto max-w-fit rounded-lg px-3 bg-white border border-gray-100 shadow-md flex justify-between space-x-2 items-center">
     <a href="/" class="flex rounded px-2 py-2 mx-2 my-2 flex flex-row content-center hover:bg-gray-200">
-        <img src="/logo-128.png" width="32" height="32" class="mr-2">
+        <img src="{{ logo_uri }}" width="32" height="32" class="mr-2" />
         <span class="relative top-1">ShareConversation</span>
     </a>
     <div class="border-l border-gray-200 h-12 w-1 m-3"></div>
