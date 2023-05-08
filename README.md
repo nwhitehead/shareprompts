@@ -1,4 +1,4 @@
-# SharePrompts
+# ShareConversation
 
 Extension to share your ChatGPT conversations and prompts.
 
@@ -7,8 +7,24 @@ any code with that project.
 
 ## Tech
 
-Backend is Rust with Postgres db. Frontend is JavaScript. Learning as I go here.
+Backend is Rust with Postgres db. Frontend is JavaScript with Vue. Learning as I go here.
 
+Pieces:
+* Extension
+    The extension itself is built with JavaScript. It goes through Vite and the CRX plugin. There is
+    a "content script" that does the main interaction with OpenAI webpages. There is a "popup" script
+    that shows options and has some buttons. This uses Vue. Both communicate with the backend to actually
+    do things.
+* Backend
+    This is a Rust program that runs at `shareconversation.com`. The server talks to a local Postgres database.
+    Uses Diesel and Actix as the main technology. Some settings are in environment variables loaded from
+    a local `.env` file. The backend also serves HTML conversations (not just JSON results).
+* Website
+    The main website at `shareconversation.com` is a single-page app using Vue. It talks to the backend
+    to do things.
+
+Each piece has it's own `npm` stuff. Even the backend has a build step, then the server serves the bundled
+files.
 
 ## Database backup/restore
 
@@ -31,17 +47,15 @@ The Chrome extension is an "app" in the Chrome developer console so has its own
 application id and everything. From within the extension we can access
 `chrome.identity` and request authentication tokens. The scopes are controlled
 by the manifest file. These tokens are full "access tokens". I don't see a way
-to just get id tokens.
+to just get id tokens (why???)
 
 To validate access tokens, I use:
 
     https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=...
 
-
 For the website, there are some Google Identity Services for Web components.
-Basically you load the Google Client API JavaScript and set up a `div` with some
-fields and it will make it a nice "Sign in with Google" button. The result of
-this flow is an id token.
+This uses Google Client API JavaScript and shows a "Sign in with Google" button.
+The result of this flow is an id token.
 
 To validate the id token you need the Google public keys. Google keys are in
 JWKS (JSON Web Key Set) format at:
@@ -51,17 +65,22 @@ JWKS (JSON Web Key Set) format at:
 The server caches them and uses cached values. The server grabs the keys every
 few hours whatever the cache control headers say.
 
-## Zip up extension
+I tried to use existing Rust clients for this but was not successful in getting
+them to work.
+
+## Package extension
 
 Need to do a build step:
 
     cd extension
     npm run package
 
-That produces the `extension.zip` for uploading to Chrome.
+That produces the `extension.zip` for uploading to Chrome. For development, you can
+do:
 
-## Currently working on
+    npm run dev
 
-* User conversation counts, for free/paid check
-* Integrating with extpay
-* Updating previously shared conversations if you share same convo again
+If the extension is installed "unpacked" from the `dist/` location then this will do
+extension HMR. To get the link working, do "Inspect" on the extension popup window.
+This establishes the websocket connection and keeps it open for HMR. Final built
+extension doesn't need this.
