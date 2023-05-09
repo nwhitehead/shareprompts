@@ -4,10 +4,7 @@
 
 <template>
         <div class="px-20 pt-15 py-20 flex flex-col max-w-screen-xl xl:mx-auto">
-            <h1 class="my-8 text-4xl">
-                Documentation
-            </h1>
-            <h2 class="mt-4 text-2xl">
+            <h2 class="mt-4 text-4xl">
                 How it works
             </h2>
             <p class="mt-4 text-base">
@@ -35,7 +32,7 @@
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Social sharing shortcut buttons are at the bottom of conversations.</figcaption>
             </figure>
 
-            <h2 class="mt-4 text-2xl">
+            <h2 class="mt-4 text-4xl">
                 Options
             </h2>
             <p class="mt-4 text-base">
@@ -101,7 +98,7 @@
                     </p>
                 </ul>
             </p>
-            <h2 class="mt-4 text-2xl">
+            <h2 class="mt-4 text-4xl">
                 Managing conversations
             </h2>
             <figure class="max-w-lg my-4 mx-auto">
@@ -127,7 +124,7 @@
                 At the bottom of your conversations are several bulk action buttons. These buttons affect all conversations. You can turn on/off
                 all the "public" or "research" settings. You can also donwload a CSV file that includes all your shared conversations.
             </p>
-            <h2 class="mt-4 text-2xl">
+            <h2 class="mt-4 text-4xl">
                 Note on sharing
             </h2>
             <p class="mt-4 text-base">
@@ -136,7 +133,7 @@
                 that links to shared conversations should be permanent.
             </p>
 
-            <h2 class="mt-4 text-2xl">
+            <h2 class="mt-4 text-4xl">
                 Paid members
             </h2>
             <p class="mt-4 text-base">
@@ -170,5 +167,21 @@
                 manually login again, just click the same <img src="../images/upgrade.png" class="inline mx-2 rounded" /> button. From
                 the payment popup window click the "Already paid? Log in" link.
             </p>
+            <h2 class="mt-4 text-4xl">
+                Brave installation
+            </h2>
+            <p class="mt-4 text-base">
+                After you install the extension, to make it work you need to enable the setting "Allow Google login for extensions".
+                Go to <code>brave://settings/extensions</code> and move the top toggle for "Allow Google login for extensions" to the
+                right to enable. The first time you use the "Share" button to share a conversation, Brave will open a popup window
+                to allow you to login to your Google account. Without changing this setting the popup would be blocked and nothing
+                will happen.
+            </p>
+            <figure class="max-w-lg my-4 mx-auto">
+                <img src="../images/brave_setup.png" class="h-auto max-w-full border shadow" />
+                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Brave requires enabling Google login
+                for extension for the extension to work properly.</figcaption>
+            </figure>
+
         </div>
 </template>
