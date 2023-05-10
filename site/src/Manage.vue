@@ -25,6 +25,21 @@ function openai_link(id) {
     return `https://chat.openai.com${id}`;
 }
 
+/// Generic function to allow JSON data download to a file with filename
+// data: JavaScript data that can be serialized with JSON.stringify
+function exportJson(filename, data) {
+    const str_data = JSON.stringify(data);
+    const blob = new Blob([str_data], { type: 'application/json;charset=utf-8;' });
+    let link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 /// Generic function to convert JS array into CSV and prompt user to save with filename
 // filename: string
 // rows: [[string]]
@@ -123,6 +138,23 @@ async function downloadMarkdown(id) {
     exportCsv(`conversation-${data.id}.csv`, rows);
 }
 
+async function downloadJson(id) {
+    if (!props.authenticated) {
+        return;
+    }
+    const addr = `${SERVER}/conversation/json/${id}`;
+    const options = {
+        method: 'GET',
+        headers: {
+            'content-type': 'application/json',
+            'credentials': 'include',
+        },
+    };
+    const response = await fetch(addr, options);
+    const data = await response.json();
+    exportJson(`conversation-${data.id}.json`, data);
+}
+
 async function downloadAllMarkdown(lst) {
     if (!props.authenticated) {
         return;
@@ -145,6 +177,29 @@ async function downloadAllMarkdown(lst) {
     }
     const rows = conversationsToRows(convos);
     exportCsv('conversations.csv', rows);
+}
+
+async function downloadAllJson(lst) {
+    if (!props.authenticated) {
+        return;
+    }
+    const ids = lst.map((item) => item.id);
+    let convos = [];
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        const addr = `${SERVER}/conversation/json/${id}`;
+        const options = {
+            method: 'GET',
+            headers: {
+                'content-type': 'application/json',
+                'credentials': 'include',
+            },
+        };
+        const response = await fetch(addr, options);
+        const data = await response.json();
+        convos.push(data);
+    }
+    exportJson('conversations.json', convos);
 }
 
 async function deleteAction(id) {
@@ -265,30 +320,41 @@ const filteredConversations = computed(() => {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in filteredConversations" class="text-gray-700">
-                        <td class="border-b p-4 dark:border-dark-5">
+                    <tr v-for="item in filteredConversations" class="text-gray-700 border-b">
+                        <td class="p-4 dark:border-dark-5">
                             <a :href="link(item.id)" target="_blank" class="text-blue-700 hover:text-blue-500">{{ item.metadata.title }}</a>
                         </td>
-                        <td class="border-b p-4 dark:border-dark-5">
+                        <td class="p-4 dark:border-dark-5">
                             {{ dateRepresentation(item.metadata.creationdate) }}
                         </td>
-                        <td class="border-b p-4 dark:border-dark-5">
+                        <td class="p-4 dark:border-dark-5">
                             <span v-if="!item.deleted" class="whitespace-nowrap rounded-full bg-green-100 px-2.5 py-0.5 text-sm text-green-700">Active</span>
                             <span v-if="item.deleted" class="whitespace-nowrap rounded-full bg-purple-100 px-2.5 py-0.5 text-sm text-purple-700">Deleted</span>
                         </td>
-                        <td class="border-b dark:border-dark-5">
+                        <td class="dark:border-dark-5">
                             <button v-if="!item.deleted && item.public" class="checkmark" @click="handleUpdate(item.id, 'public', false)" title="Flip">✓</button>
                             <button v-if="!item.deleted && !item.public" class="checkmark" @click="handleUpdate(item.id, 'public', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
-                        <td class="border-b dark:border-dark-5">
+                        <td class="dark:border-dark-5">
                             <button v-if="!item.deleted && item.research" class="checkmark" @click="handleUpdate(item.id, 'research', false)" title="Flip">✓</button>
                             <button v-if="!item.deleted && !item.research" class="checkmark" @click="handleUpdate(item.id, 'research', true)" title="Flip">&nbsp;&nbsp;&nbsp;</button>
                         </td>
-                        <td class="border-b p-4 dark:border-dark-5">
+                        <td class="p-4 dark:border-dark-5 w-1/3">
                             <button v-if="!item.deleted" class="btn-blue" @click="downloadMarkdown(item.id)" title="Download conversation as CSV">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                </svg>
+                                <div class="flex flex-row items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    <span class="text-xs ml-2"> CSV</span>
+                                </div>
+                            </button>
+                            <button v-if="!item.deleted" class="btn-blue" @click="downloadJson(item.id)" title="Download conversation as JSON">
+                                <div class="flex flex-row items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    <span class="text-xs ml-2"> JSON</span>
+                                </div>
                             </button>
                             <button v-if="!item.deleted" class="btn-red" @click="deleteAction(item.id)" title="Delete conversation">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -312,15 +378,26 @@ const filteredConversations = computed(() => {
                 Clear all public
             </button>
             <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('research', true)">
-                Set all research
+                <span class="text-base">Set all research</span>
             </button>
             <button v-if="filteredConversations.length > 0" class="btn-yellow mb-2" @click="handleSetall('research', false)">
-                Clear all research
+                <span class="text-base">Clear all research</span>
             </button>
-            <button v-if="filteredConversations.length > 0" class="btn-blue flex flex-row mb-2" @click="downloadAllMarkdown(props.conversations.filter((item) => !item.deleted))" title="Download all conversations as CSV">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg> All
+            <button v-if="filteredConversations.length > 0" class="btn-blue mb-2" @click="downloadAllMarkdown(props.conversations.filter((item) => !item.deleted))" title="Download all conversations as CSV">
+                <div class="flex flex-row items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span class="text-base ml-1"> CSV All</span>
+                </div>
+            </button>
+            <button v-if="filteredConversations.length > 0" class="btn-blue mb-2" @click="downloadAllJson(props.conversations.filter((item) => !item.deleted))" title="Download all conversations as CSV">
+                <div class="flex flex-row items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span class="text-base ml-1"> JSON All</span>
+                </div>
             </button>
 
             <p class="my-4">
