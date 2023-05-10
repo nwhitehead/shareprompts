@@ -8,6 +8,9 @@ export default defineConfig({
     base: "",
     plugins: [
         vue(),
-        webExtension({ manifest }),
+        webExtension({ 
+            manifest,
+            useDynamicUrlWebAccessibleResources: false,
+        }),
     ],
 })

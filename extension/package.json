@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "package": "vite build && rm -f extension.zip && zip -r extension.zip dist/*"
+    "package": "vite build && rm -f extension.zip && cd dist && zip -r ../extension.zip *"
   },
   "dependencies": {
     "@samrum/vite-plugin-web-extension": "^4.1.0",
