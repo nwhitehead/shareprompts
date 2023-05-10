@@ -10,11 +10,11 @@
     "package": "vite build && rm -f extension.zip && zip -r extension.zip dist/*"
   },
   "dependencies": {
+    "@samrum/vite-plugin-web-extension": "^4.1.0",
     "extpay": "^3.0.7",
     "vue": "^3.2.47"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.17",
     "@vitejs/plugin-vue": "^4.1.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.23",
