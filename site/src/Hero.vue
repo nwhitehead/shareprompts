@@ -16,10 +16,10 @@
         </div>
 
         <div class="my-8">
-            <span class="my-4 text-lg text-white bg-indigo-500 rounded px-4 py-2">
-                Install extension
-            </span>
-            <span class="ml-2">COMING SOON!</span>
+            <a href="https://chrome.google.com/webstore/detail/shareconversation/mmjckpijidoldpmailjmfnkbfngnfmhn"
+               class="my-4 btn-indigo flex flex-row">
+                <img src="images/chrome.svg" class="inline mr-2" width="24" height="24" /> Install extension
+            </a>
         </div>
 
 
