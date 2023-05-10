@@ -2,6 +2,8 @@
 
 Extension to share your ChatGPT conversations and prompts.
 
+Main page is at [ShareConversation.com](https://shareconversation.com/).
+
 Inspired by [ShareGPT](https://github.com/domeccleston/sharegpt), does not share
 any code with that project.
 

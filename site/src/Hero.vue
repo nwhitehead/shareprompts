@@ -18,7 +18,7 @@
         <div class="my-8">
             <a href="https://chrome.google.com/webstore/detail/shareconversation/mmjckpijidoldpmailjmfnkbfngnfmhn"
                class="my-4 btn-indigo flex flex-row">
-                <img src="images/chrome.svg" class="inline mr-2" width="24" height="24" /> Install extension
+                <img src="../images/chrome.svg" class="inline mr-2" width="24" height="24" /> Install extension
             </a>
         </div>
 
