@@ -6,6 +6,9 @@ import webExtension from "@samrum/vite-plugin-web-extension";
 // https://vitejs.dev/config/
 export default defineConfig({
     base: "",
+    build: {
+        minify: false
+    },
     plugins: [
         vue(),
         webExtension({ 

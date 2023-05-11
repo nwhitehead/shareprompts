@@ -168,7 +168,25 @@
                 the payment popup window click the "Already paid? Log in" link.
             </p>
             <h2 class="mt-4 text-4xl">
-                Brave installation
+                Firefox notes
+            </h2>
+            <p class="mt-4 text-base">
+                In Firefox, the only difference in behavior is that after the extension is installed you will need to visit
+                <a href="https://chat.openai.com/" class="text-blue-700 hover:text-blue-500">chat.openai.com</a>
+                then click the
+                <span class="rounded">
+                    <img src="../images/logo-128.png" width="16" height="16" class="inline mx-1" />
+                    ShareConversation
+                </span> icon on the toolbar. Once you have clicked the extension icon, the "Share" button will be
+                activated.
+            </p>
+            <figure class="max-w-lg my-4 mx-auto">
+                <img src="../images/firefox_click2.png" class="h-auto max-w-full border shadow" />
+                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Firefox requires clicking the extension icon to give it permission
+                to show the "Share" button on the ChatGPT page.</figcaption>
+            </figure>
+            <h2 class="mt-4 text-4xl">
+                Brave notes
             </h2>
             <p class="mt-4 text-base">
                 After you install the extension, to make it work you need to enable the setting "Allow Google login for extensions".
