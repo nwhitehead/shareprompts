@@ -30,6 +30,7 @@ async function handleClick(button) {
     const title = elem.textContent;
 
     const avatar = config.avatar ? getAvatar() : getAnonymousAvatar();
+
     const conversationData = {
         avatar,
         dialog: [],
