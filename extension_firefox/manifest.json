@@ -1,0 +1,35 @@
+{
+    "manifest_version": 3,
+    "name": "ShareConversation",
+    "description": "Share your ChatGPT conversations",
+    "version": "1.3",
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": "images/logo-128.png"
+    },
+    "icons": {
+        "16": "images/logo-16.png",
+        "32": "images/logo-32.png",
+        "48": "images/logo-48.png",
+        "128": "images/logo-128.png"
+    },
+    "content_scripts": [
+        {
+          "matches": ["https://chat.openai.com/*"],
+          "js": ["index.js"],
+          "run_at": "document_end"
+        }
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "permissions": [
+        "storage", "identity", "clipboardRead"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "share777@shareconversation.com",
+            "strict_min_version": "109.0"
+        }
+    }
+}
