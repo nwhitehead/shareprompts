@@ -1,17 +1,24 @@
-import { resolve } from 'path';
 import { defineConfig } from 'vite';
-import { crx } from '@crxjs/vite-plugin'
-import manifest from './manifest.json' assert { type: 'json' } // Node >=17
+import manifest_chrome from './chrome/manifest.json' assert { type: 'json' } // Node >=17
+import manifest_firefox from './firefox/manifest.json' assert { type: 'json' } // Node >=17
 import vue from '@vitejs/plugin-vue';
+import webExtension from "@samrum/vite-plugin-web-extension";
 
-// https://vitejs.dev/config/
+const is_firefox = (process.env.BROWSER === 'firefox');
+const manifest = is_firefox ? manifest_firefox : manifest_chrome;
+const outDir = is_firefox ? "dist/firefox/" : "dist/chrome/";
+
 export default defineConfig({
     base: "",
     build: {
-        minify: false
+        minify: false,
+        outDir
     },
     plugins: [
         vue(),
-        crx({ manifest })
+        webExtension({ 
+            manifest,
+            useDynamicUrlWebAccessibleResources: false,
+        }),
     ],
 })
