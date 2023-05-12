@@ -24,7 +24,7 @@
         "scripts": ["background.js"]
     },
     "permissions": [
-        "storage", "identity", "clipboardRead"
+        "storage", "identity", "clipboardRead", "clipboardWrite"
     ],
     "browser_specific_settings": {
         "gecko": {
