@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "package": "vite build && rm -f extension.zip && cd dist && zip -r ../extension.zip *"
+    "package_chrome": "BROWSER=chrome vite build && rm -f dist/extension_chrome.zip && cd dist/chrome && zip -r ../extension_chrome.zip *",
+    "package_firefox": "BROWSER=firefox vite build && rm -f dist/extension_firefox.zip && cd dist/firefox && zip -r ../extension_firefox.zip *",
+    "full_package": "npm run package_chrome && npm run package_firefox"
   },
   "dependencies": {
     "@samrum/vite-plugin-web-extension": "^4.1.0",
