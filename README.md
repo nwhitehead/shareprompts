@@ -72,15 +72,31 @@ them to work.
 
 ## Package extension
 
-Need to do a build step:
+Setup `npm`, then do:
 
     cd extension
-    npm run package
+    npm install
 
-That produces the `extension.zip` for uploading to Chrome. For development, you can
-do:
+To build just for Chrome:
 
-    npm run dev
+    cd extension
+    npm run package_chrome
+
+To build just for Firefox:
+
+    cd extension
+    npm run package_firefox
+
+To build for both:
+
+    cd extension
+    npm run full_package
+
+That produces the `extension/dist/extension_chrome.zip` for uploading to Google
+for Chrome and `extension/dist/extension_firefox.zip` for uploading to Mozilla
+for Firefox. For development, you can do:
+
+    BROWSER=chrome npm run dev
 
 If the extension is installed "unpacked" from the `dist/` location then this will do
 extension HMR. To get the link working, do "Inspect" on the extension popup window.
