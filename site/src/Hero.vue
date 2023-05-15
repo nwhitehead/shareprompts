@@ -15,10 +15,16 @@
             </p>
         </div>
 
-        <div class="my-8">
+        <div class="mt-8 mb-4">
             <a href="https://chrome.google.com/webstore/detail/shareconversation/mmjckpijidoldpmailjmfnkbfngnfmhn"
                class="my-4 btn-indigo flex flex-row">
                 <img src="../images/chrome.svg" class="inline mr-2" width="24" height="24" /> Install extension
+            </a>
+        </div>
+        <div class="mb-8">
+            <a href="https://addons.mozilla.org/en-US/firefox/addon/shareconversation/"
+               class="my-4 btn-indigo flex flex-row">
+                <img src="../images/firefox.svg" class="inline mr-2" width="24" height="24" /> Install extension
             </a>
         </div>
 
