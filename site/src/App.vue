@@ -2,34 +2,11 @@
 
 import { computed, reactive, ref, onMounted, watch } from 'vue';
 import { SERVER, GOOGLE_PROJECT_ID } from './config.js';
-import Manage from './Manage.vue';
-import Hero from './Hero.vue';
-import NotFound from './NotFound.vue';
-import Privacy from './Privacy.vue';
-import Support from './Support.vue';
-import Doc from './Doc.vue';
 
 const authenticated = ref(null);
 const conversations = reactive([]);
 const MAXLENGTH = 200;
 let gis_initialized = false;
-const currentPath = ref(window.location.hash);
-
-const routes = {
-  '/': Hero,
-  '/manage': Manage,
-  '/doc': Doc,
-  '/support': Support,
-  '/privacy': Privacy,
-}
-
-window.addEventListener('hashchange', () => {
-  currentPath.value = window.location.hash
-});
-
-const currentView = computed(() => {
-  return routes[currentPath.value.slice(1) || '/'] || NotFound;
-});
 
 onMounted(async () => {
     window.addEventListener("load", () => {
@@ -156,14 +133,14 @@ window.appAuthenticate = (arg) => {
     <div class="w-full absolute top-0 bg-white">
         <div class="max-w-screen-xl mx-5 xl:mx-auto flex justify-between items-center h-16 min-w-[350px]">
             <div class="flex flex-row items-center">
-                <a href="/" class="text-2xl font-bold flex flex-row px-4">
+                <router-link to="/" class="text-2xl font-bold flex flex-row px-4">
                     <img src="/images/logo-128.png" width="32" height="32" class="mr-2">
                     <span class="hidden md:block">ShareConversation</span>
-                </a>
-                <a href="#/manage" class="px-4">Manage</a>
-                <a href="#/doc" class="px-4">Docs</a>
-                <a href="#/support" class="px-4">Support</a>
-                <a href="#/privacy" class="px-4">Privacy</a>
+                </router-link>
+                <router-link to="/manage" class="px-4">Manage</router-link>
+                <router-link to="/doc" class="px-4">Docs</router-link>
+                <router-link to="/support.html" class="px-4">Support</router-link>
+                <router-link to="/privacy.html" class="px-4">Privacy</router-link>
             </div>
 
             <div v-show="!authenticated" id="googleButton" class="my-4"></div>
@@ -174,10 +151,11 @@ window.appAuthenticate = (arg) => {
 
     <div class="min-w-[300px] pt-16 w-full">
         <div>
-            <component :is="currentView"
+            <router-view
                 :authenticated="authenticated"
                 :conversations="conversations"
-                @update="updateConversationsFromServer()" />
+                @update="updateConversationsFromServer()">
+            </router-view>
         </div>
     </div>
 

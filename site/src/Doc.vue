@@ -200,6 +200,14 @@
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Brave requires enabling Google login
                 for extension for the extension to work properly.</figcaption>
             </figure>
-
+            <h2 class="mt-4 text-4xl">
+                Legal
+            </h2>
+            <p class="mt-4 text-base">
+                By installing the ShareConversation browser extension you are agreeing to the
+                <router-link to="/terms_of_service.html" class="text-blue-700 hover:text-blue-500">
+                    Terms of Service.
+                </router-link>
+            </p>
         </div>
 </template>

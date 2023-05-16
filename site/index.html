@@ -10,10 +10,34 @@
     <script type="module">
 
 import { createApp } from 'vue';
+import { createRouter, createWebHistory } from 'vue-router';
+
 import App from './src/App.vue';
+import Manage from './src/Manage.vue';
+import Hero from './src/Hero.vue';
+import NotFound from './src/NotFound.vue';
+import Privacy from './src/Privacy.vue';
+import Support from './src/Support.vue';
+import Doc from './src/Doc.vue';
+import Terms from './src/Terms.vue';
+
 import './src/main.css';
 
-createApp(App).mount('#app');
+const routes = [
+    { path: '/', component: Hero },
+    { path: '/manage', component: Manage },
+    { path: '/doc', component: Doc },
+    { path: '/support.html', component: Support },
+    { path: '/privacy.html', component: Privacy },
+    { path: '/terms_of_service.html', component: Terms },
+];
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes,
+});
+
+createApp(App).use(router).mount('#app');
 
     </script>
 
