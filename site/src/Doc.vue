@@ -137,7 +137,7 @@
                 Paid members
             </h2>
             <p class="mt-4 text-base">
-                Free users have a limit on shared conversations. Once you reach your limit you need to upgrade your account or delete existing
+                Free users have a limit of 5 shared conversations. Once you reach your limit you need to upgrade your account or delete existing
                 conversations. Paid users have NO LIMIT to number of conversations shared. If you try to share too many conversations, the extension
                 will open the upgrade popup to prompt you to upgrade your account.
             </p>
@@ -185,11 +185,22 @@
                 <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">Firefox requires clicking the extension icon to give it permission
                 to show the "Share" button on the ChatGPT page.</figcaption>
             </figure>
+            <p class="mt-4 text-base">
+                To avoid needing to click the extension to active the "Share" button, you can set optional permissions for the extension.
+                Click on the extension puzzle piece
+                <img src="../images/puzzle.png" class="inline mx-2 rounded" /> then choose "Manage extensions". Under "ShareConversation"
+                click the "Permissions" tab and enable the optional permission "Access your data for https://chat.openai.com".
+            </p>
+            <figure class="max-w-lg my-4 mx-auto">
+                <img src="../images/firefox_permissions2.png" class="h-auto max-w-full border shadow" />
+                <figcaption class="mt-2 text-sm text-center text-gray-500 dark:text-gray-400">You can enable the optional permission "Access your data for https://chat.openai.com"
+                to let the ShareConversation extension always add the "Share" button without needing the extra click.</figcaption>
+            </figure>
             <h2 class="mt-4 text-4xl">
                 Brave notes
             </h2>
             <p class="mt-4 text-base">
-                After you install the extension, to make it work you need to enable the setting "Allow Google login for extensions".
+                On the Brave browser after you install the extension, to make it work you need to enable the setting "Allow Google login for extensions".
                 Go to <code>brave://settings/extensions</code> and move the top toggle for "Allow Google login for extensions" to the
                 right to enable. The first time you use the "Share" button to share a conversation, Brave will open a popup window
                 to allow you to login to your Google account. Without changing this setting the popup would be blocked and nothing
