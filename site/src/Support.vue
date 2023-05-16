@@ -15,6 +15,10 @@
             <p class="my-4">
                 <a href="mailto:nwhitehe@gmail.com?subject=ShareConversation%20feedback" class="btn-blue" target="_blank">Email Developer</a>
             </p>
+            <p class="my-4">
+                I'm also on <a href="https://twitter.com/NathanW31337" class="text-blue-700 hover:text-blue-500">Twitter</a> but I don't obsessively
+                check it like I do my email.
+            </p>
             <p class="mt-4">
             If you have questions or concerns about OpenAI's ChatGPT, they have a
             <a href="https://help.openai.com/en/" class="text-blue-700 hover:text-blue-500">help page</a>.
