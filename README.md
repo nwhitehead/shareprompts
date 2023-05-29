@@ -1,5 +1,9 @@
 # ShareConversation
 
+NOTE: This project has been discontinued since ChatGPT has introduced built-in
+sharing of conversations.
+
+
 Extension to share your ChatGPT conversations and prompts.
 
 Main page is at [ShareConversation.com](https://shareconversation.com/).
